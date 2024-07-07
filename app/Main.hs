@@ -80,7 +80,7 @@ defaultEnv :: Env
 defaultEnv =
   [ ( "+",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a + b
+        (SAtom (AInt a) : xs) -> Right $ SAtom $ AInt $ foldl (\acc (SAtom (AInt x)) -> acc + x) a xs
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "-",
@@ -128,7 +128,7 @@ repl = do
   case parseSExpr input of
     Left err -> print err
     Right e -> do
-    --   print e
+      --   print e
       case eval e defaultEnv of
         Left err -> print err
         Right res -> print res
