@@ -27,8 +27,10 @@ data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] SExpr | SNativeFn Nativ
 
 stringOfSExpr :: SExpr -> Text
 stringOfSExpr (SAtom (AInt x)) = pack $ show x
+stringOfSExpr (SAtom (AReal x)) = pack $ show x
 stringOfSExpr (SAtom (AString x)) = pack $ show x
 stringOfSExpr (SAtom (ASymbol x)) = x
+stringOfSExpr (SAtom (AKeyword x)) = ":" <> x
 stringOfSExpr (SList xs) = "(" <> pack (unwords $ map (unpack . stringOfSExpr) xs) <> ")"
 stringOfSExpr (SLambda _ _) = "<lambda>"
 stringOfSExpr (SNativeFn _) = "<nativeFn>"
@@ -41,7 +43,12 @@ instance Eq NativeFn where
 instance Show NativeFn where
   show _ = "<nativeFn>"
 
-data Atom = AInt Integer | AString String | ASymbol Text
+data Atom
+  = AInt Integer
+  | AReal Double
+  | AString String
+  | ASymbol Text
+  | AKeyword Text
   deriving (Eq, Show)
 
 type Parser = Parsec Void Text
@@ -55,14 +62,14 @@ lexeme = L.lexeme sc
 symbol :: Text -> Parser Text
 symbol = L.symbol sc
 
-charLiteral :: Parser Char
-charLiteral = between (char '\'') (char '\'') L.charLiteral
-
 stringLiteral :: Parser String
 stringLiteral = char '\"' *> manyTill L.charLiteral (char '\"')
 
 int :: Parser Integer
 int = lexeme L.decimal
+
+signedInt :: Parser Integer
+signedInt = L.signed sc int
 
 real :: Parser Double
 real = lexeme L.float
@@ -75,29 +82,41 @@ symbolParser :: Parser Text
 symbolParser =
   lexeme $ takeWhile1P (Just "symbol") (\c -> not (isWhitespace c) && c /= '(' && c /= ')' && c /= '\'')
 
+keyword :: Parser Atom
+keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
+
 atom :: Parser Atom
 atom =
   choice
     [ AInt <$> int,
+      --   AInt <$> signedInt,
+      --   AReal <$> real,
       AString <$> stringLiteral,
+      keyword,
       ASymbol <$> symbolParser
     ]
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
+quoted :: Parser SExpr
+quoted = char '\'' *> (SList . (SAtom (ASymbol "quote") :) . pure <$> sexpr)
+
 list :: Parser SExpr
 list = SList <$> parens (many sexpr)
 
 sexpr :: Parser SExpr
-sexpr = choice [SAtom <$> atom, list]
+sexpr = choice [SAtom <$> atom, list, quoted]
 
 parseSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
 parseSExpr = parse sexpr ""
 
 type Env = [(Text, SExpr)]
 
-newtype RuntimeException = RuntimeException Text deriving (Show)
+newtype RuntimeException = RuntimeException Text
+
+instance Show RuntimeException where
+  show (RuntimeException msg) = "Runtime error: " ++ unpack msg
 
 defaultEnv :: Env
 defaultEnv =
@@ -120,15 +139,47 @@ defaultEnv =
       SNativeFn $ NativeFn $ \case
         [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a `div` b
         _ -> Left $ RuntimeException "Arguments must be integers"
+    ),
+    ( "=",
+      SNativeFn $ NativeFn $ \case
+        [a, b] -> Right $ SAtom $ ASymbol $ if a == b then ":t" else ":f"
+        _ -> Left $ RuntimeException "must have two arguments"
+    ),
+    ( "neq",
+      SNativeFn $ NativeFn $ \case
+        [a, b] -> Right $ SAtom $ ASymbol $ if a /= b then ":t" else ":f"
+        _ -> Left $ RuntimeException "must have two arguments"
+    ),
+    ( ">",
+      SNativeFn $ NativeFn $ \case
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a > b then ":t" else ":f"
+        _ -> Left $ RuntimeException "Arguments must be integers"
+    ),
+    ( ">=",
+      SNativeFn $ NativeFn $ \case
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a >= b then ":t" else ":f"
+        _ -> Left $ RuntimeException "Arguments must be integers"
+    ),
+    ( "<",
+      SNativeFn $ NativeFn $ \case
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a < b then ":t" else ":f"
+        _ -> Left $ RuntimeException "Arguments must be integers"
+    ),
+    ( "<=",
+      SNativeFn $ NativeFn $ \case
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a <= b then ":t" else ":f"
+        _ -> Left $ RuntimeException "Arguments must be integers"
     )
   ]
 
 eval :: SExpr -> Env -> Either RuntimeException (SExpr, Env)
 eval (SAtom (AInt x)) env = Right (SAtom $ AInt x, env)
+eval (SAtom (AReal x)) env = Right (SAtom $ AReal x, env)
 eval (SAtom (AString x)) env = Right (SAtom $ AString x, env)
+eval (SAtom (AKeyword x)) env = Right (SAtom $ AKeyword x, env)
 eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
   (value', _) <- eval value env
-  Right (SAtom $ ASymbol name, (name, value') : env)
+  Right (value', (name, value') : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
 eval (SAtom (ASymbol x)) env = case lookup x env of
   Just v -> Right (v, env)
@@ -153,12 +204,12 @@ repl env = do
   case parseSExpr input of
     Left err -> print err
     Right e -> do
-      --   print e
-      case eval e defaultEnv of
+      -- print e
+      case eval e env of
         Left err -> print err
         Right (result, env') -> do
           putStrLn $ unpack (stringOfSExpr result) ++ "\n"
-          print env'
+          --   print env'
           repl env'
   repl env
 
