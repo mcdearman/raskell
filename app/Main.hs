@@ -180,6 +180,8 @@ eval (SAtom (AKeyword x)) env = Right (SAtom $ AKeyword x, env)
 eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
   (value', _) <- eval value env
   Right (value', (name, value') : env)
+eval (SList [SAtom (ASymbol "def"), SList (SAtom (ASymbol name) : params), body]) env = do
+  Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, (name, SLambda (map (\(SAtom (ASymbol x)) -> x) params) body) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
 eval (SAtom (ASymbol x)) env = case lookup x env of
   Just v -> Right (v, env)
