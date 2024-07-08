@@ -121,10 +121,12 @@ x
                     (loop b (+ a b) (- i 1))))))
     (loop 0 1 n)))
 
-fib n =
-  let loop a b i =
-    if i == 0
-      a
-    else
-      loop b (a + b) (i - 1)
-  loop 0 1 n
+(def (map f xs)
+  (if (empty? xs)
+      '()
+      (pair (f (head xs)) (map f (tail xs)))))
+  
+(def (foldr f z xs)
+  (if (empty? xs)
+      z
+      (f (head xs) (foldr f z (tail xs)))))
