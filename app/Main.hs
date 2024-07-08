@@ -221,6 +221,9 @@ eval (SList [SAtom (ASymbol "let"), SList bindings, body]) env = do
     Left err -> Left err
 eval (SList [SAtom (ASymbol "fn"), SList params, body]) env = do
   Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, env)
+eval (SList (SAtom (ASymbol "list") : xs)) env = do
+  xs' <- mapM (`eval` env) xs
+  Right (SList (map fst xs'), env)
 eval (SAtom (ASymbol x)) env = case lookup x env of
   Just v -> Right (v, env)
   Nothing -> Left $ RuntimeException $ "Symbol " <> x <> " not found in environment"
