@@ -183,6 +183,12 @@ eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
 eval (SList [SAtom (ASymbol "def"), SList (SAtom (ASymbol name) : params), body]) env = do
   Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, (name, SLambda (map (\(SAtom (ASymbol x)) -> x) params) body) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
+eval (SList [SAtom (ASymbol "if"), cond, t, f]) env = do
+  (cond', _) <- eval cond env
+  case cond' of
+    SAtom (ASymbol ":t") -> eval t env
+    SAtom (ASymbol ":f") -> eval f env
+    _ -> Left $ RuntimeException "Condition must evaluate to a boolean"
 eval (SAtom (ASymbol x)) env = case lookup x env of
   Just v -> Right (v, env)
   Nothing -> Left $ RuntimeException $ "Symbol " <> x <> " not found in environment"
