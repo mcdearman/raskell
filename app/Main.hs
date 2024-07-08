@@ -255,7 +255,7 @@ eval (SList (fn : args)) env = do
     SLambda params body -> do
       let newEnv = zip params args' ++ fn_env
       eval body newEnv
-    SNativeFn (NativeFn f) -> fmap (,env) (f args')
+    SNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
     _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
 eval (SList []) _ = Left $ RuntimeException "Empty list"
 eval e _ = Left $ RuntimeException ("Invalid expression: " <> pack (show e))
