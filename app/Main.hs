@@ -189,9 +189,20 @@ eval (SList [SAtom (ASymbol "if"), cond, t, f]) env = do
     SAtom (ASymbol ":t") -> eval t env
     SAtom (ASymbol ":f") -> eval f env
     _ -> Left $ RuntimeException "Condition must evaluate to a boolean"
+eval (SList [SAtom (ASymbol "let"), SList bindings, body]) env = do
+  let bindings' = map (\case (SList [SAtom (ASymbol name), value]) -> (name, value); _ -> error "Invalid binding") bindings
+      newEnv = bindings' ++ env
+  case eval body newEnv of
+    Right (result, _) -> Right (result, env)
+    Left err -> Left err
+eval (SList [SAtom (ASymbol "fn"), SList params, body]) env = do
+  Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, env)
 eval (SAtom (ASymbol x)) env = case lookup x env of
   Just v -> Right (v, env)
   Nothing -> Left $ RuntimeException $ "Symbol " <> x <> " not found in environment"
+eval (SAtom _) _ = Left $ RuntimeException "Invalid expression: atom expected"
+eval (SLambda _ _) _ = Left $ RuntimeException "Invalid expression: lambda expected"
+eval (SNativeFn _) _ = Left $ RuntimeException "Invalid expression: native function expected"
 eval (SList (fn : args)) env = do
   (fn', fn_env) <- eval fn env
   args' <- mapM (fmap fst . (`eval` env)) args
