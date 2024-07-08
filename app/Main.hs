@@ -6,6 +6,7 @@
 module Main (main) where
 
 import Data.Text (Text, pack, unpack)
+import Data.Text.Lazy (toStrict)
 import Data.Void
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Text.Megaparsec
@@ -21,7 +22,7 @@ import Text.Megaparsec
   )
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-import Text.Pretty.Simple (pPrint)
+import Text.Pretty.Simple (pPrint, pShow, pString)
 
 data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] SExpr | SNativeFn NativeFn
   deriving (Eq, Show)
@@ -143,12 +144,12 @@ defaultEnv =
     ),
     ( "=",
       SNativeFn $ NativeFn $ \case
-        [a, b] -> Right $ SAtom $ ASymbol $ if a == b then ":t" else ":f"
+        [a, b] -> Right $ SAtom $ AKeyword $ if a == b then "t" else "f"
         _ -> Left $ RuntimeException "must have two arguments"
     ),
     ( "neq",
       SNativeFn $ NativeFn $ \case
-        [a, b] -> Right $ SAtom $ ASymbol $ if a /= b then ":t" else ":f"
+        [a, b] -> Right $ SAtom $ AKeyword $ if a /= b then "t" else "f"
         _ -> Left $ RuntimeException "must have two arguments"
     ),
     ( ">",
@@ -209,10 +210,14 @@ eval (SList [SAtom (ASymbol "if"), cond, t, f]) env = do
     SAtom (AKeyword "f") -> eval f env
     _ -> Left $ RuntimeException "Condition must evaluate to a boolean"
 eval (SList [SAtom (ASymbol "let"), SList bindings, body]) env = do
-  let bindings' = map (\case (SList [SAtom (ASymbol name), value]) -> (name, value); _ -> error "Invalid binding") bindings
-      newEnv = bindings' ++ env
-  case eval body newEnv of
-    Right (result, _) -> Right (result, env)
+  let evalBindings [] accEnv = Right accEnv
+      evalBindings ((SList [SAtom (ASymbol name), value]) : rest) accEnv =
+        case eval value accEnv of
+          Right (value', _) -> evalBindings rest ((name, value') : accEnv)
+          Left err -> Left err
+      evalBindings _ _ = Left $ RuntimeException "Invalid let binding"
+  case evalBindings bindings env of
+    Right newEnv -> eval body newEnv
     Left err -> Left err
 eval (SList [SAtom (ASymbol "fn"), SList params, body]) env = do
   Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, env)
@@ -227,7 +232,7 @@ eval (SList (fn : args)) env = do
       let newEnv = zip params args' ++ fn_env
       eval body newEnv
     SNativeFn (NativeFn f) -> fmap (,env) (f args')
-    _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> pack (show fn')
+    _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
 eval (SList []) _ = Left $ RuntimeException "Empty list"
 eval e _ = Left $ RuntimeException ("Invalid expression: " <> pack (show e))
 
