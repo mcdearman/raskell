@@ -110,4 +110,12 @@ x
 
 (def (compose f g x) (f (g x)))
 
-(def (fib n) (let ((fib-iter (fn (a b count)) (if (= count 0)) a (fib-iter b (+ a b) (- count 1)))) (fib-iter 0 1 n)))
+(def (fib n) (let ((loop (fn (a b i) (if (= i 0) a (loop b (+ a b) (- i 1)))))) (loop 0 1 n)))
+
+fib n =
+  let loop a b i =
+    if i == 0
+      a
+    else
+      loop b (a + b) (i - 1)
+  loop 0 1 n

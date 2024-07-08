@@ -169,6 +169,12 @@ defaultEnv =
       SNativeFn $ NativeFn $ \case
         [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a <= b then ":t" else ":f"
         _ -> Left $ RuntimeException "Arguments must be integers"
+    ),
+    ( "not",
+      SNativeFn $ NativeFn $ \case
+        [SAtom (AKeyword "t")] -> Right $ SAtom $ AKeyword "f"
+        [SAtom (AKeyword "f")] -> Right $ SAtom $ AKeyword "t"
+        _ -> Left $ RuntimeException "Argument must be a boolean"
     )
   ]
 
@@ -183,11 +189,23 @@ eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
 eval (SList [SAtom (ASymbol "def"), SList (SAtom (ASymbol name) : params), body]) env = do
   Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, (name, SLambda (map (\(SAtom (ASymbol x)) -> x) params) body) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
+eval (SList [SAtom (ASymbol "and"), a, b]) env = do
+  (a', _) <- eval a env
+  case a' of
+    SAtom (AKeyword "t") -> eval b env
+    SAtom (AKeyword "f") -> Right (SAtom $ AKeyword "f", env)
+    _ -> Left $ RuntimeException "First argument must evaluate to a boolean"
+eval (SList [SAtom (ASymbol "or"), a, b]) env = do
+  (a', _) <- eval a env
+  case a' of
+    SAtom (AKeyword "t") -> Right (SAtom $ AKeyword "t", env)
+    SAtom (AKeyword "f") -> eval b env
+    _ -> Left $ RuntimeException "First argument must evaluate to a boolean"
 eval (SList [SAtom (ASymbol "if"), cond, t, f]) env = do
   (cond', _) <- eval cond env
   case cond' of
-    SAtom (ASymbol ":t") -> eval t env
-    SAtom (ASymbol ":f") -> eval f env
+    SAtom (AKeyword "t") -> eval t env
+    SAtom (AKeyword "f") -> eval f env
     _ -> Left $ RuntimeException "Condition must evaluate to a boolean"
 eval (SList [SAtom (ASymbol "let"), SList bindings, body]) env = do
   let bindings' = map (\case (SList [SAtom (ASymbol name), value]) -> (name, value); _ -> error "Invalid binding") bindings
@@ -208,7 +226,7 @@ eval (SList (fn : args)) env = do
       let newEnv = zip params args' ++ fn_env
       eval body newEnv
     SNativeFn (NativeFn f) -> fmap (,env) (f args')
-    _ -> Left $ RuntimeException "First element of list must be a function"
+    _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> pack (show fn')
 eval (SList []) _ = Left $ RuntimeException "Empty list"
 eval e _ = Left $ RuntimeException ("Invalid expression: " <> pack (show e))
 
@@ -220,7 +238,7 @@ repl env = do
   case parseSExpr input of
     Left err -> print err
     Right e -> do
-      -- print e
+      print e
       case eval e env of
         Left err -> print err
         Right (result, env') -> do
