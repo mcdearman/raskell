@@ -21,6 +21,7 @@ import Text.Megaparsec
   )
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
+import Text.Pretty.Simple (pPrint)
 
 data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] SExpr | SNativeFn NativeFn
   deriving (Eq, Show)
@@ -238,7 +239,7 @@ repl env = do
   case parseSExpr input of
     Left err -> print err
     Right e -> do
-      print e
+      pPrint e
       case eval e env of
         Left err -> print err
         Right (result, env') -> do

@@ -112,6 +112,13 @@ x
 
 (def (fib n) (let ((loop (fn (a b i) (if (= i 0) a (loop b (+ a b) (- i 1)))))) (loop 0 1 n)))
 
+(def (fib n)
+  (let ((loop (fn (a b i)
+                (if (= i 0)
+                    a
+                    (loop b (+ a b) (- i 1))))))
+    (loop 0 1 n)))
+
 fib n =
   let loop a b i =
     if i == 0

@@ -71,7 +71,8 @@ executable raskell
     build-depends:    
         base ^>=4.17.2.1,
         megaparsec,
-        text
+        text,
+        pretty-simple,
 
     -- Directories containing source files.
     hs-source-dirs:   app
