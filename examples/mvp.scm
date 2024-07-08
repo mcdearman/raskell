@@ -114,6 +114,12 @@ x
 
 (def (fib n) (let ((loop (fn (a b i) (if (= i 0) a (loop b (+ a b) (- i 1)))))) (loop 0 1 n)))
 
+(def (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))
+
+(def (fact n) (let ((loop (fn (n acc) (if (= n 0) acc (loop (- n 1) (* n acc)))))) (loop n 1)))
+
+(def (map f xs) (if (empty? xs) '() (pair (f (head xs)) (map f (tail xs)))))
+
 (def (fib n)
   (let ((loop (fn (a b i)
                 (if (= i 0)

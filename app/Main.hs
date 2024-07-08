@@ -177,6 +177,27 @@ defaultEnv =
         [SAtom (AKeyword "t")] -> Right $ SAtom $ AKeyword "f"
         [SAtom (AKeyword "f")] -> Right $ SAtom $ AKeyword "t"
         _ -> Left $ RuntimeException "Argument must be a boolean"
+    ),
+    ( "empty?",
+      SNativeFn $ NativeFn $ \case
+        [SList []] -> Right $ SAtom $ AKeyword "t"
+        [SList _] -> Right $ SAtom $ AKeyword "f"
+        _ -> Left $ RuntimeException "Argument must be a list"
+    ),
+    ( "pair",
+      SNativeFn $ NativeFn $ \case
+        [a, SList b] -> Right $ SList (a : b)
+        _ -> Left $ RuntimeException "Arguments must be a value and a list"
+    ),
+    ( "head",
+      SNativeFn $ NativeFn $ \case
+        [SList (x : _)] -> Right x
+        _ -> Left $ RuntimeException "Argument must be a non-empty list"
+    ),
+    ( "tail",
+      SNativeFn $ NativeFn $ \case
+        [SList (_ : xs)] -> Right $ SList xs
+        _ -> Left $ RuntimeException "Argument must be a non-empty list"
     )
   ]
 
@@ -247,7 +268,7 @@ repl env = do
   case parseSExpr input of
     Left err -> print err
     Right e -> do
-      pPrint e
+      -- pPrint e
       case eval e env of
         Left err -> print err
         Right (result, env') -> do
