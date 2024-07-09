@@ -231,11 +231,11 @@ eval (SList [SAtom (ASymbol "macro"), SList (SAtom (ASymbol name) : params), bod
    in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
 eval (SList [SAtom (ASymbol "quasiquote"), x]) env = do
-  let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = y
-      recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = y
-      recQuasiquote (SList ys) = SList $ map recQuasiquote ys
-      recQuasiquote y = y
-  Right (recQuasiquote x, env)
+  let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = eval y env
+      recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = eval y env
+      recQuasiquote (SList ys) = Right (SList $ map recQuasiquote ys, env)
+      recQuasiquote y = Right (y, env)
+  recQuasiquote x
 eval (SList [SAtom (ASymbol "and"), a, b]) env = do
   (a', _) <- eval a env
   case a' of
