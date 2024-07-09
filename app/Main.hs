@@ -82,7 +82,7 @@ isWhitespace c = c == ' ' || c == '\n' || c == '\r' || c == '\t'
 -- Symbols can be any sequence of characters that are not whitespace, parens, or quotes
 symbolParser :: Parser Text
 symbolParser =
-  lexeme $ takeWhile1P (Just "symbol") (\c -> not (isWhitespace c) && c /= '(' && c /= ')' && c /= '\'')
+  lexeme $ takeWhile1P (Just "symbol") (\c -> c `notElem` [' ', '\n', '\r', '\t', '(', ')', '\'', '`', ','])
 
 keyword :: Parser Atom
 keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
@@ -91,7 +91,7 @@ atom :: Parser Atom
 atom =
   choice
     [ AInt <$> int,
-      --   AInt <$> signedInt,
+      -- AInt <$> signedInt,
       --   AReal <$> real,
       AString <$> stringLiteral,
       keyword,
@@ -107,11 +107,17 @@ quote = char '\'' *> (SList . (SAtom (ASymbol "quote") :) . pure <$> sexpr)
 quasiquote :: Parser SExpr
 quasiquote = char '`' *> (SList . (SAtom (ASymbol "quasiquote") :) . pure <$> sexpr)
 
+unquote :: Parser SExpr
+unquote = char ',' *> (SList . (SAtom (ASymbol "unquote") :) . pure <$> sexpr)
+
+unquoteSplicing :: Parser SExpr
+unquoteSplicing = lexeme ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
+
 list :: Parser SExpr
 list = SList <$> parens (many sexpr)
 
 sexpr :: Parser SExpr
-sexpr = choice [SAtom <$> atom, list, quote]
+sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquote, unquoteSplicing]
 
 parseSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
 parseSExpr = parse sexpr ""
@@ -145,6 +151,16 @@ defaultEnv =
         [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a `div` b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
+    ( "%",
+      SNativeFn $ NativeFn $ \case
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a `mod` b
+        _ -> Left $ RuntimeException "Arguments must be integers"
+    ),
+    ( "pow",
+      SNativeFn $ NativeFn $ \case
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a ^ b
+        _ -> Left $ RuntimeException "Arguments must be integers"
+    ),
     ( "=",
       SNativeFn $ NativeFn $ \case
         [a, b] -> Right $ SAtom $ AKeyword $ if a == b then "t" else "f"
@@ -157,22 +173,22 @@ defaultEnv =
     ),
     ( ">",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a > b then ":t" else ":f"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( ">=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a >= b then ":t" else ":f"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a < b then ":t" else ":f"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ ASymbol $ if a <= b then ":t" else ":f"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "not",
@@ -216,6 +232,12 @@ eval (SList [SAtom (ASymbol "def"), SList (SAtom (ASymbol name) : params), body]
   let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) body
    in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
+eval (SList [SAtom (ASymbol "quasiquote"), x]) env = do
+  let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = y
+      recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = y
+      recQuasiquote (SList ys) = SList $ map recQuasiquote ys
+      recQuasiquote y = y
+  Right (recQuasiquote x, env)
 eval (SList [SAtom (ASymbol "and"), a, b]) env = do
   (a', _) <- eval a env
   case a' of

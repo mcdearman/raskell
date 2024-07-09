@@ -120,6 +120,51 @@ x
 
 (def (map f xs) (if (empty? xs) '() (pair (f (head xs)) (map f (tail xs)))))
 
+(def (foldr f z xs) (if (empty? xs) z (f (head xs) (foldr f z (tail xs)))))
+
+; is_prime: check if a number is prime
+(def (is_prime n)
+  (if (< n 2)
+      false
+      (let loop ((i 2))
+        (if (< i n)
+            (if (= (% n i) 0)
+                false
+                (loop (+ i 1)))
+            true))))
+          
+; aks: check if a number is prime using the AKS primality test
+(def (aks n)
+  (if (< n 2)
+      false
+      (let outer ((r 2))
+        (while (<= r (sqrt n))
+          (if (= (% n r) 0)
+              false
+              (let inner ((a 1) (b 1))
+                (while (<= a (sqrt n))
+                  (if (= (+ (* a a) (* b b)) n)
+                      true
+                      (inner (+ a 1) (+ b 1)))))
+              (outer (+ r 1))))
+        true)))
+
+; sieve of eratosthenes
+(def (sieve n)
+  (let ((s (array n true)))
+    (set s 0 false)
+    (set s 1 false)
+    (let loop ((i 2))
+      (if (< i n)
+          (if (get s i)
+              (let ((j (* i i)))
+                (while (< j n)
+                  (set s j false)
+                  (set j (+ j i))))
+              '())
+          (loop (+ i 1))))
+    (foldr (fn (i acc) (if (get s i) (pair i acc) acc)) '() (range 2 n))))
+
 (def (fib n)
   (let ((loop (fn (a b i)
                 (if (= i 0)
