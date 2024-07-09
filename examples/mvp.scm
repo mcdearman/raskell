@@ -136,3 +136,9 @@ x
   (if (empty? xs)
       z
       (f (head xs) (foldr f z (tail xs)))))
+
+(macro (loop body)
+  `(let loop () ,body (loop)))
+
+(macro (while cond . body)
+  `(loop (if ,cond (begin ,@body) '())))

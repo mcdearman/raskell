@@ -22,7 +22,7 @@ import Text.Megaparsec
   )
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-import Text.Pretty.Simple (pPrint, pShow, pString)
+import Text.Pretty.Simple (pShow)
 
 data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] SExpr | SNativeFn NativeFn
   deriving (Eq, Show)
@@ -101,14 +101,17 @@ atom =
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
-quoted :: Parser SExpr
-quoted = char '\'' *> (SList . (SAtom (ASymbol "quote") :) . pure <$> sexpr)
+quote :: Parser SExpr
+quote = char '\'' *> (SList . (SAtom (ASymbol "quote") :) . pure <$> sexpr)
+
+quasiquote :: Parser SExpr
+quasiquote = char '`' *> (SList . (SAtom (ASymbol "quasiquote") :) . pure <$> sexpr)
 
 list :: Parser SExpr
 list = SList <$> parens (many sexpr)
 
 sexpr :: Parser SExpr
-sexpr = choice [SAtom <$> atom, list, quoted]
+sexpr = choice [SAtom <$> atom, list, quote]
 
 parseSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
 parseSExpr = parse sexpr ""
@@ -209,8 +212,9 @@ eval (SAtom (AKeyword x)) env = Right (SAtom $ AKeyword x, env)
 eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
   (value', _) <- eval value env
   Right (value', (name, value') : env)
-eval (SList [SAtom (ASymbol "def"), SList (SAtom (ASymbol name) : params), body]) env = do
-  Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, (name, SLambda (map (\(SAtom (ASymbol x)) -> x) params) body) : env)
+eval (SList [SAtom (ASymbol "def"), SList (SAtom (ASymbol name) : params), body]) env =
+  let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) body
+   in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
 eval (SList [SAtom (ASymbol "and"), a, b]) env = do
   (a', _) <- eval a env
@@ -241,7 +245,16 @@ eval (SList [SAtom (ASymbol "let"), SList bindings, body]) env = do
     Right newEnv -> eval body newEnv
     Left err -> Left err
 eval (SList [SAtom (ASymbol "fn"), SList params, body]) env = do
-  Right (SLambda (map (\(SAtom (ASymbol x)) -> x) params) body, env)
+  Right (SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol fn param") params) body, env)
+eval (SList (SAtom (ASymbol "begin") : forms)) env = do
+  let evalForms [] accEnv = Right (SList [], accEnv)
+      evalForms [x] accEnv = eval x accEnv
+      evalForms (x : xs) accEnv = do
+        (_, newEnv) <- eval x accEnv
+        evalForms xs newEnv
+  case evalForms forms env of
+    Right (result, _) -> Right (result, env)
+    Left err -> Left err
 eval (SList (SAtom (ASymbol "list") : xs)) env = do
   xs' <- mapM (`eval` env) xs
   Right (SList (map fst xs'), env)
