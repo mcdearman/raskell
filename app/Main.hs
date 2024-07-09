@@ -24,7 +24,7 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Text.Pretty.Simple (pShow)
 
-data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] SExpr | SNativeFn NativeFn
+data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] Bool SExpr | SNativeFn NativeFn
   deriving (Eq, Show)
 
 stringOfSExpr :: SExpr -> Text
@@ -34,7 +34,7 @@ stringOfSExpr (SAtom (AString x)) = pack $ show x
 stringOfSExpr (SAtom (ASymbol x)) = x
 stringOfSExpr (SAtom (AKeyword x)) = ":" <> x
 stringOfSExpr (SList xs) = "(" <> pack (unwords $ map (unpack . stringOfSExpr) xs) <> ")"
-stringOfSExpr (SLambda _ _) = "<lambda>"
+stringOfSExpr (SLambda {}) = "<lambda>"
 stringOfSExpr (SNativeFn _) = "<nativeFn>"
 
 newtype NativeFn = NativeFn ([SExpr] -> Either RuntimeException SExpr)
@@ -76,9 +76,6 @@ signedInt = L.signed sc int
 real :: Parser Double
 real = lexeme L.float
 
-isWhitespace :: Char -> Bool
-isWhitespace c = c == ' ' || c == '\n' || c == '\r' || c == '\t'
-
 -- Symbols can be any sequence of characters that are not whitespace, parens, or quotes
 symbolParser :: Parser Text
 symbolParser =
@@ -91,8 +88,6 @@ atom :: Parser Atom
 atom =
   choice
     [ AInt <$> int,
-      -- AInt <$> signedInt,
-      --   AReal <$> real,
       AString <$> stringLiteral,
       keyword,
       ASymbol <$> symbolParser
@@ -229,7 +224,10 @@ eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
   (value', _) <- eval value env
   Right (value', (name, value') : env)
 eval (SList [SAtom (ASymbol "def"), SList (SAtom (ASymbol name) : params), body]) env =
-  let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) body
+  let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) False body
+   in Right (lam, (name, lam) : env)
+eval (SList [SAtom (ASymbol "macro"), SList (SAtom (ASymbol name) : params), body]) env = do
+  let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) True body
    in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
 eval (SList [SAtom (ASymbol "quasiquote"), x]) env = do
@@ -267,7 +265,7 @@ eval (SList [SAtom (ASymbol "let"), SList bindings, body]) env = do
     Right newEnv -> eval body newEnv
     Left err -> Left err
 eval (SList [SAtom (ASymbol "fn"), SList params, body]) env = do
-  Right (SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol fn param") params) body, env)
+  Right (SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol fn param") params) False body, env)
 eval (SList (SAtom (ASymbol "begin") : forms)) env = do
   let evalForms [] accEnv = Right (SList [], accEnv)
       evalForms [x] accEnv = eval x accEnv
@@ -287,8 +285,11 @@ eval (SList (fn : args)) env = do
   (fn', fn_env) <- eval fn env
   args' <- mapM (fmap fst . (`eval` env)) args
   case fn' of
-    SLambda params body -> do
+    SLambda params False body -> do
       let newEnv = zip params args' ++ fn_env
+      eval body newEnv
+    SLambda params True body -> do
+      let newEnv = zip params args ++ fn_env
       eval body newEnv
     SNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
     _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
