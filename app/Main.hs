@@ -8,6 +8,7 @@ module Main (main) where
 import Data.Text (Text, pack, unpack)
 import Data.Text.Lazy (toStrict)
 import Data.Void
+import GHC.Natural (Natural)
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Text.Megaparsec
   ( MonadParsec (takeWhile1P),
@@ -129,6 +130,7 @@ defaultEnv =
   [ ( "+",
       SNativeFn $ NativeFn $ \case
         (SAtom (AInt a) : xs) -> Right $ SAtom $ AInt $ foldl (\acc (SAtom (AInt x)) -> acc + x) a xs
+        [] -> Left $ RuntimeException "Must have at least one argument"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "-",
