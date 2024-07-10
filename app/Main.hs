@@ -23,7 +23,7 @@ import Text.Megaparsec
   )
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-import Text.Pretty.Simple (pShow)
+import Text.Pretty.Simple (pPrint, pShow)
 
 data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] Bool SExpr | SNativeFn NativeFn
   deriving (Eq, Show)
@@ -113,7 +113,7 @@ list :: Parser SExpr
 list = SList <$> parens (many sexpr)
 
 sexpr :: Parser SExpr
-sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquote, unquoteSplicing]
+sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquoteSplicing, unquote]
 
 parseSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
 parseSExpr = parse sexpr ""
@@ -214,6 +214,11 @@ defaultEnv =
       SNativeFn $ NativeFn $ \case
         [SList (_ : xs)] -> Right $ SList xs
         _ -> Left $ RuntimeException "Argument must be a non-empty list"
+    ),
+    ( "eval",
+      SNativeFn $ NativeFn $ \case
+        [x] -> eval x defaultEnv >>= \(result, _) -> Right result
+        _ -> Left $ RuntimeException "Must have exactly one argument"
     )
   ]
 
@@ -234,10 +239,22 @@ eval (SList [SAtom (ASymbol "macro"), SList (SAtom (ASymbol name) : params), bod
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
 eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
   let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = eval y env
-      recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = eval y env
+      recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = do
+        case eval y env of
+          Right (SList ys, _) -> Right (SList ys, env)
+          _ -> Left $ RuntimeException "Unquote-splicing must evaluate to a list"
       recQuasiquote (SList ys) = do
+        let splicedResults [] = Right []
+            splicedResults (SList spliced : rest) = do
+              rest' <- splicedResults rest
+              Right (spliced ++ rest')
+            splicedResults (y : rest) = do
+              rest' <- splicedResults rest
+              Right (y : rest')
         ys' <- mapM recQuasiquote ys
-        Right (SList (map fst ys'), env)
+        let (results, _) = unzip ys'
+        spliced <- splicedResults results
+        Right (SList spliced, env)
       recQuasiquote y = Right (y, env)
    in recQuasiquote x
 eval (SList [SAtom (ASymbol "and"), a, b]) env = do
@@ -308,7 +325,7 @@ repl env = do
   case parseSExpr input of
     Left err -> print err
     Right e -> do
-      -- pPrint e
+      pPrint e
       case eval e env of
         Left err -> print err
         Right (result, env') -> do
