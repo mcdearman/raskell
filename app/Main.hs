@@ -230,12 +230,14 @@ eval (SList [SAtom (ASymbol "macro"), SList (SAtom (ASymbol name) : params), bod
   let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) True body
    in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
-eval (SList [SAtom (ASymbol "quasiquote"), x]) env = do
+eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
   let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = eval y env
       recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = eval y env
-      recQuasiquote (SList ys) = Right (SList $ map recQuasiquote ys, env)
+      recQuasiquote (SList ys) = do
+        ys' <- mapM recQuasiquote ys
+        Right (SList (map fst ys'), env)
       recQuasiquote y = Right (y, env)
-  recQuasiquote x
+   in recQuasiquote x
 eval (SList [SAtom (ASymbol "and"), a, b]) env = do
   (a', _) <- eval a env
   case a' of
