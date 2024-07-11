@@ -29,21 +29,21 @@ import Text.Pretty.Simple (pPrint, pShow)
 data SExpr
   = SAtom Atom
   | SList [SExpr]
-  | DottedPair SExpr SExpr
+  | Cons SExpr SExpr
   | SLambda [Text] Bool SExpr
   | SNativeFn NativeFn
   deriving (Eq, Show)
 
-stringOfSExpr :: SExpr -> Text
-stringOfSExpr (SAtom (AInt x)) = pack $ show x
-stringOfSExpr (SAtom (AReal x)) = pack $ show x
-stringOfSExpr (SAtom (AString x)) = pack $ show x
-stringOfSExpr (SAtom (ASymbol x)) = x
-stringOfSExpr (SAtom (AKeyword x)) = ":" <> x
-stringOfSExpr (SList xs) = "(" <> pack (unwords $ map (unpack . stringOfSExpr) xs) <> ")"
-stringOfSExpr (DottedPair x y) = "(" <> stringOfSExpr x <> " . " <> stringOfSExpr y <> ")"
-stringOfSExpr (SLambda {}) = "<lambda>"
-stringOfSExpr (SNativeFn _) = "<nativeFn>"
+textOfSExpr :: SExpr -> Text
+textOfSExpr (SAtom (AInt x)) = pack $ show x
+textOfSExpr (SAtom (AReal x)) = pack $ show x
+textOfSExpr (SAtom (AString x)) = pack $ show x
+textOfSExpr (SAtom (ASymbol x)) = x
+textOfSExpr (SAtom (AKeyword x)) = ":" <> x
+textOfSExpr (SList xs) = "(" <> pack (unwords $ map (unpack . textOfSExpr) xs) <> ")"
+textOfSExpr (Cons x y) = "(" <> textOfSExpr x <> " . " <> textOfSExpr y <> ")"
+textOfSExpr (SLambda {}) = "<lambda>"
+textOfSExpr (SNativeFn _) = "<nativeFn>"
 
 newtype NativeFn = NativeFn ([SExpr] -> Either RuntimeException SExpr)
 
@@ -344,7 +344,7 @@ repl env = do
       case eval e env of
         Left err -> print err
         Right (result, env') -> do
-          putStrLn $ unpack (stringOfSExpr result) ++ "\n"
+          putStrLn $ unpack (textOfSExpr result) ++ "\n"
           --   print env'
           repl env'
   repl env
