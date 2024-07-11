@@ -26,7 +26,12 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Text.Pretty.Simple (pPrint, pShow)
 
-data SExpr = SAtom Atom | SList [SExpr] | SLambda [Text] Bool SExpr | SNativeFn NativeFn
+data SExpr
+  = SAtom Atom
+  | SList [SExpr]
+  | DottedPair SExpr SExpr
+  | SLambda [Text] Bool SExpr
+  | SNativeFn NativeFn
   deriving (Eq, Show)
 
 stringOfSExpr :: SExpr -> Text
@@ -36,6 +41,7 @@ stringOfSExpr (SAtom (AString x)) = pack $ show x
 stringOfSExpr (SAtom (ASymbol x)) = x
 stringOfSExpr (SAtom (AKeyword x)) = ":" <> x
 stringOfSExpr (SList xs) = "(" <> pack (unwords $ map (unpack . stringOfSExpr) xs) <> ")"
+stringOfSExpr (DottedPair x y) = "(" <> stringOfSExpr x <> " . " <> stringOfSExpr y <> ")"
 stringOfSExpr (SLambda {}) = "<lambda>"
 stringOfSExpr (SNativeFn _) = "<nativeFn>"
 
