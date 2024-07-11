@@ -182,4 +182,7 @@ x
       z
       (f (head xs) (foldr f z (tail xs)))))
 
-(macro (defn name args body) `(def name (fn ,args ,body)))
+`(1 2 ,@(map id '(3 4)))
+
+(macro (defn name args body) `(def ,name (fn ,args ,body)))
+

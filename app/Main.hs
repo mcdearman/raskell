@@ -8,6 +8,7 @@ module Main (main) where
 import Data.Text (Text, pack, unpack)
 import Data.Text.Lazy (toStrict)
 import Data.Void
+import Debug.Trace
 import GHC.Natural (Natural)
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Text.Megaparsec
@@ -222,6 +223,14 @@ defaultEnv =
     )
   ]
 
+expandMacro :: SExpr -> Env -> Either RuntimeException SExpr
+expandMacro (SList (SAtom (ASymbol name) : args)) env = case lookup name env of
+  Just (SLambda params True body) -> do
+    let newEnv = zip params args ++ env
+    eval body newEnv >>= \(result, _) -> Right result
+  _ -> Left $ RuntimeException "Not a macro"
+expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
+
 eval :: SExpr -> Env -> Either RuntimeException (SExpr, Env)
 eval (SAtom (AInt x)) env = Right (SAtom $ AInt x, env)
 eval (SAtom (AReal x)) env = Right (SAtom $ AReal x, env)
@@ -302,7 +311,7 @@ eval (SList (SAtom (ASymbol "list") : xs)) env = do
 eval (SAtom (ASymbol x)) env = case lookup x env of
   Just v -> Right (v, env)
   Nothing -> Left $ RuntimeException $ "Symbol " <> x <> " not found in environment"
-eval (SList (fn : args)) env = do
+eval sexpr@(SList (fn : args)) env = do
   (fn', fn_env) <- eval fn env
   args' <- mapM (fmap fst . (`eval` env)) args
   case fn' of
@@ -310,8 +319,8 @@ eval (SList (fn : args)) env = do
       let newEnv = zip params args' ++ fn_env
       eval body newEnv
     SLambda params True body -> do
-      let newEnv = zip params args ++ fn_env
-      eval body newEnv
+      m <- trace "expansion: " (expandMacro sexpr fn_env)
+      eval m env
     SNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
     _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
 eval (SList []) _ = Left $ RuntimeException "Empty list"
