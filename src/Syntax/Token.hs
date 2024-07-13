@@ -1,5 +1,6 @@
-module Token where
-import Span
+module Syntax.Token where
+
+import Common.Span (Span)
 
 data Token = Token {tokenType :: TokenType, span :: Span} deriving (Show, Eq)
 
