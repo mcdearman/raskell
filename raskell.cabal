@@ -62,7 +62,15 @@ executable raskell
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules: 
+       Span
+       Token
+
+    default-extensions: 
+        OverloadedStrings
+        ScopedTypeVariables
+        LambdaCase
+        TupleSections
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

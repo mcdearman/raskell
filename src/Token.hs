@@ -1,4 +1,5 @@
 module Token where
+import Span
 
 data Token = Token {tokenType :: TokenType, span :: Span} deriving (Show, Eq)
 

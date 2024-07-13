@@ -1,9 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
-
--- {-# OPTIONS_GHC -Wno-unused-do-bind #-}
-
 module Main (main) where
 
 import Data.Text (Text, pack, unpack)
