@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
-{-# OPTIONS_GHC -Wno-unused-do-bind #-}
+-- {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Main (main) where
 
@@ -9,7 +9,6 @@ import Data.Text (Text, pack, unpack)
 import Data.Text.Lazy (toStrict)
 import Data.Void
 import Debug.Trace
-import GHC.Natural (Natural)
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Text.Megaparsec
   ( MonadParsec (takeWhile1P),

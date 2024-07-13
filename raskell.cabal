@@ -52,7 +52,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -Werror=missing-signatures -Werror=incomplete-patterns
 
 executable raskell
     -- Import common warning flags.
@@ -75,7 +75,7 @@ executable raskell
         pretty-simple,
 
     -- Directories containing source files.
-    hs-source-dirs:   app
+    hs-source-dirs:   src
 
     -- Base language which the package is written in.
     default-language: Haskell2010
