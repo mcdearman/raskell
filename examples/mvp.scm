@@ -172,6 +172,17 @@ x
                     (loop b (+ a b) (- i 1))))))
     (loop 0 1 n)))
 
+(def (fib n)
+  (let loop ((a 0) (b 1) (i n))
+    (if (= i 0)
+        a
+        (loop b (+ a b) (- i 1)))))
+
+(def (fib n)
+  (if (<= n 1)
+      n
+      (+ (fib (- n 1)) (fib (- n 2)))))
+
 (def (map f xs)
   (if (empty? xs)
       '()
