@@ -65,6 +65,11 @@ executable raskell
     other-modules: 
        Common.Span
        Syntax.Token
+       Syntax.Lexer
+       Syntax.Sexpr
+       Syntax.AST
+       Syntax.Reader
+       Syntax.Parser
 
     default-extensions: 
         OverloadedStrings
