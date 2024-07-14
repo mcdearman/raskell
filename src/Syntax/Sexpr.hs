@@ -2,15 +2,9 @@ module Syntax.Sexpr where
 
 import Common.Span (Span)
 
-data Sexpr = Sexpr
-  { sexprType :: SexprType,
-    span :: Span
-  }
-  deriving (Show, Eq)
-
-data SexprType
-  = Atom Atom
-  | Cons Sexpr Sexpr
+data Sexpr
+  = Atom Atom Span
+  | Cons Sexpr Sexpr Span
   deriving (Show, Eq)
 
 data Atom

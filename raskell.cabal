@@ -30,6 +30,7 @@ executable raskell
         ScopedTypeVariables
         LambdaCase
         TupleSections
+        TemplateHaskell
     build-depends:    
         base ^>=4.17.2.1,
         megaparsec,
