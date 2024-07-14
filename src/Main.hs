@@ -332,7 +332,7 @@ repl env = do
   putStr "> "
   input <- pack <$> getLine
   case parseSExpr input of
-    Left err -> print err
+    Left err -> pPrint err
     Right e -> do
       pPrint e
       case eval e env of
