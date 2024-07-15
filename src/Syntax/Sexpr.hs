@@ -1,15 +1,16 @@
 module Syntax.Sexpr where
 
 import Common.Span (Span)
+import Data.Text
 
-data Sexpr
+data SExpr
   = Atom Atom Span
-  | Cons Sexpr Sexpr Span
+  | Cons SExpr SExpr Span
   deriving (Show, Eq)
 
 data Atom
-  = Symbol String
-  | Keyword String
+  = Symbol Text
+  | Keyword Text
   | Int Int
-  | String String
+  | String Text
   deriving (Show, Eq)

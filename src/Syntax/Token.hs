@@ -11,8 +11,21 @@ data Token = Token
 data TokenType
   = Symbol
   | Keyword
+  | Nat
   | Int
+  | Rational
+  | Real
   | String
+  | LParen
+  | RParen
+  | LBracket
+  | RBracket
+  | LBrace
+  | RBrace
+  | Quote
+  | Backquote
+  | Comma
+  | CommaAt
   | Whitespace
   | Comment
   deriving (Show, Eq)

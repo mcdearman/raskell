@@ -20,7 +20,7 @@ executable raskell
        Common.Span
        Syntax.Token
        Syntax.Lexer
-       Syntax.Sexpr
+       Syntax.SExpr
        Syntax.AST
        Syntax.Reader
        Syntax.Parser
