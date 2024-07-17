@@ -19,7 +19,6 @@ executable raskell
     other-modules: 
        Common.Span
        Syntax.Token
-       Syntax.Lexer
        Syntax.SExpr
        Syntax.AST
        Syntax.Reader

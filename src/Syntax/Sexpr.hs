@@ -1,4 +1,4 @@
-module Syntax.Sexpr where
+module Syntax.SExpr where
 
 import Common.Span (Span)
 import Data.Text
