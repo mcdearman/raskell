@@ -11,6 +11,6 @@ data SExpr
 data Atom
   = Symbol Text
   | Keyword Text
-  | Int Int
-  | String Text
+  | Int Integer
+  | String String
   deriving (Show, Eq)
