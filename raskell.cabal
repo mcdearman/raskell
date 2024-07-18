@@ -19,10 +19,14 @@ executable raskell
     other-modules: 
        Common.Span
        Syntax.Token
+       Syntax.Lexer
        Syntax.SExpr
        Syntax.AST
        Syntax.Reader
        Syntax.Parser
+       Runtime.Env
+       Runtime.Eval
+       Runtime.RuntimeException
 
     default-extensions: 
         OverloadedStrings

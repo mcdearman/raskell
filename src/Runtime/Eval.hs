@@ -1,0 +1,104 @@
+module Runtime.Eval where
+
+-- expandMacro :: SExpr -> Env -> Either RuntimeException SExpr
+-- expandMacro (SList (Atom (ASymbol name) : args)) env = case lookup name env of
+--   Just (SLambda params True body) -> do
+--     let newEnv = zip params args ++ env
+--     eval body newEnv >>= \(result, _) -> Right result
+--   _ -> Left $ RuntimeException "Not a macro"
+-- expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
+
+-- eval :: SExpr -> Env -> Either RuntimeException (SExpr, Env)
+-- eval (Atom (AInt x)) env = Right (Atom $ AInt x, env)
+-- eval (Atom (AReal x)) env = Right (Atom $ AReal x, env)
+-- eval (Atom (AString x)) env = Right (Atom $ AString x, env)
+-- eval (Atom (AKeyword x)) env = Right (Atom $ AKeyword x, env)
+-- eval (SList [Atom (ASymbol "def"), Atom (ASymbol name), value]) env = do
+--   (value', _) <- eval value env
+--   Right (value', (name, value') : env)
+-- eval (SList [Atom (ASymbol "def"), SList (Atom (ASymbol name) : params), body]) env =
+--   let lam = SLambda (map (\case (Atom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) False body
+--    in Right (lam, (name, lam) : env)
+-- eval (SList [Atom (ASymbol "macro"), SList (Atom (ASymbol name) : params), body]) env = do
+--   let lam = SLambda (map (\case (Atom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) True body
+--    in Right (lam, (name, lam) : env)
+-- eval (SList [Atom (ASymbol "quote"), x]) env = Right (x, env)
+-- eval (SList [Atom (ASymbol "quasiquote"), x]) env =
+--   let recQuasiquote (SList [Atom (ASymbol "unquote"), y]) = eval y env
+--       recQuasiquote (SList [Atom (ASymbol "unquote-splicing"), y]) = do
+--         case eval y env of
+--           Right (SList ys, _) -> Right (SList ys, env)
+--           _ -> Left $ RuntimeException "Unquote-splicing must evaluate to a list"
+--       recQuasiquote (SList ys) = do
+--         let splicedResults [] = Right []
+--             splicedResults (SList spliced : rest) = do
+--               rest' <- splicedResults rest
+--               Right (spliced ++ rest')
+--             splicedResults (y : rest) = do
+--               rest' <- splicedResults rest
+--               Right (y : rest')
+--         ys' <- mapM recQuasiquote ys
+--         let (results, _) = unzip ys'
+--         spliced <- splicedResults results
+--         Right (SList spliced, env)
+--       recQuasiquote y = Right (y, env)
+--    in recQuasiquote x
+-- eval (SList [Atom (ASymbol "and"), a, b]) env = do
+--   (a', _) <- eval a env
+--   case a' of
+--     Atom (AKeyword "t") -> eval b env
+--     Atom (AKeyword "f") -> Right (Atom $ AKeyword "f", env)
+--     _ -> Left $ RuntimeException "First argument must evaluate to a boolean"
+-- eval (SList [Atom (ASymbol "or"), a, b]) env = do
+--   (a', _) <- eval a env
+--   case a' of
+--     Atom (AKeyword "t") -> Right (Atom $ AKeyword "t", env)
+--     Atom (AKeyword "f") -> eval b env
+--     _ -> Left $ RuntimeException "First argument must evaluate to a boolean"
+-- eval (SList [Atom (ASymbol "if"), cond, t, f]) env = do
+--   (cond', _) <- eval cond env
+--   case cond' of
+--     Atom (AKeyword "t") -> eval t env
+--     Atom (AKeyword "f") -> eval f env
+--     _ -> Left $ RuntimeException "Condition must evaluate to a boolean"
+-- eval (SList [Atom (ASymbol "let"), SList bindings, body]) env = do
+--   let evalBindings [] accEnv = Right accEnv
+--       evalBindings ((SList [Atom (ASymbol name), value]) : rest) accEnv =
+--         case eval value accEnv of
+--           Right (value', _) -> evalBindings rest ((name, value') : accEnv)
+--           Left err -> Left err
+--       evalBindings _ _ = Left $ RuntimeException "Invalid let binding"
+--   case evalBindings bindings env of
+--     Right newEnv -> eval body newEnv
+--     Left err -> Left err
+-- eval (SList [Atom (ASymbol "fn"), SList params, body]) env = do
+--   Right (SLambda (map (\case (Atom (ASymbol x)) -> x; _ -> error "Non-symbol fn param") params) False body, env)
+-- eval (SList (Atom (ASymbol "begin") : forms)) env = do
+--   let evalForms [] accEnv = Right (SList [], accEnv)
+--       evalForms [x] accEnv = eval x accEnv
+--       evalForms (x : xs) accEnv = do
+--         (_, newEnv) <- eval x accEnv
+--         evalForms xs newEnv
+--   case evalForms forms env of
+--     Right (result, _) -> Right (result, env)
+--     Left err -> Left err
+-- eval (SList (Atom (ASymbol "list") : xs)) env = do
+--   xs' <- mapM (`eval` env) xs
+--   Right (SList (map fst xs'), env)
+-- eval (Atom (ASymbol x)) env = case lookup x env of
+--   Just v -> Right (v, env)
+--   Nothing -> Left $ RuntimeException $ "Symbol " <> x <> " not found in environment"
+-- eval sexpr@(SList (fn : args)) env = do
+--   (fn', fn_env) <- eval fn env
+--   args' <- mapM (fmap fst . (`eval` env)) args
+--   case fn' of
+--     SLambda params False body -> do
+--       let newEnv = zip params args' ++ fn_env
+--       eval body newEnv
+--     SLambda params True body -> do
+--       m <- trace "expansion: " (expandMacro sexpr fn_env)
+--       eval m env
+--     SNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
+--     _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
+-- eval (SList []) _ = Left $ RuntimeException "Empty list"
+-- eval e _ = Left $ RuntimeException ("Invalid expression: " <> pack (show e))

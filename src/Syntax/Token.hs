@@ -1,6 +1,9 @@
 module Syntax.Token where
 
 import Common.Span (Span)
+import Data.Ratio (Ratio)
+import Data.Text (Text)
+import GHC.TypeLits (Nat, Natural)
 
 data Token = Token
   { tokenType :: TokenType,
@@ -9,13 +12,16 @@ data Token = Token
   deriving (Show, Eq)
 
 data TokenType
-  = Symbol
-  | Keyword
-  | Nat
-  | Int
-  | Rational
-  | Real
-  | String
+  = Symbol Text
+  | Keyword Text
+  | Nat Nat
+  | BigNat Natural
+  | Int Int
+  | BigInt Integer
+  | Rational Rat
+  | BigRational Rational
+  | Real Double
+  | String Text
   | LParen
   | RParen
   | LBracket
@@ -28,4 +34,5 @@ data TokenType
   | CommaAt
   | Whitespace
   | Comment
+  | Eof
   deriving (Show, Eq)
