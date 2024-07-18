@@ -50,8 +50,8 @@ atom =
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
-cons :: Parser SExpr
-cons = Cons <$> sexpr <*> sexpr <*> pure (Span 0 0)
+-- cons :: Parser SExpr
+-- cons = Cons <$> sexpr <*> sexpr <*> pure (Span 0 0)
 
 -- quote :: Parser SExpr
 -- quote = char '\'' *> (Cons . (Atom (ASymbol "quote") :) . pure <$> sexpr)
@@ -71,7 +71,8 @@ cons = Cons <$> sexpr <*> sexpr <*> pure (Span 0 0)
 -- cons = Cons <$> sexpr <*> sexpr <*> pure (Span 0 0)
 
 -- sexpr :: Parser SExpr
--- sexpr = choice [Atom <$> atom] -- list, quote, quasiquote, unquoteSplicing, unquote]
+-- sexpr = choice [Atom <$> atom, list, quote, quasiquote, unquoteSplicing, unquote]
+-- sexpr = Atom atom
 
 -- parseSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
 -- parseSExpr = parse sexpr ""
