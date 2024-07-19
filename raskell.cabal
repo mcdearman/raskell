@@ -1,7 +1,7 @@
 cabal-version:      3.0
 name:               raskell
 version:            0.1.0.0
-synopsis:           A Racket-like Lisp language
+synopsis:           A small Lisp interpreter in under 400 lines of Haskell
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Chris McDearman
