@@ -1,2 +1,0 @@
-module Syntax.Parser where
-
