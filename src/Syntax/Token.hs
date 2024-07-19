@@ -18,7 +18,7 @@ data TokenType
   | BigNat Natural
   | Int Int
   | BigInt Integer
-  | Rational Rat
+  | Rational (Ratio Int)
   | BigRational Rational
   | Real Double
   | String Text

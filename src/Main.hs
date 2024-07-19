@@ -1,11 +1,8 @@
 module Main (main) where
 
-import Data.Text (Text, pack, unpack)
-import Data.Text.Lazy (toStrict)
-import Data.Void
-import Debug.Trace
+import Data.Text (pack)
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
-import Text.Pretty.Simple (pPrint, pShow)
+import Text.Pretty.Simple (pPrint)
 
 -- defaultEnv :: Env
 -- defaultEnv =
