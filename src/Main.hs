@@ -310,7 +310,7 @@ eval (SList (SAtom (ASymbol "list") : xs)) env = do
   Right (SList (map fst xs'), env)
 eval (SAtom (ASymbol x)) env = case lookup x env of
   Just v -> Right (v, env)
-  Nothing -> Left $ RuntimeException $ "Symbol " <> x <> " not found in environment"
+  Nothing -> Left $ RuntimeException $ "Symbol '" <> x <> "' not found in environment"
 eval sexpr@(SList (fn : args)) env = do
   (fn', fn_env) <- eval fn env
   args' <- mapM (fmap fst . (`eval` env)) args
@@ -339,7 +339,7 @@ repl env = do
         Left err -> print err
         Right (result, env') -> do
           putStrLn $ unpack (textOfSExpr result) ++ "\n"
-          --   print env'
+          pPrint env'
           repl env'
   repl env
 
