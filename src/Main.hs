@@ -216,6 +216,11 @@ defaultEnv =
         [SList (_ : xs)] -> Right $ SList xs
         _ -> Left $ RuntimeException "Argument must be a non-empty list"
     ),
+    ( "++",
+      SNativeFn $ NativeFn $ \case
+        [SList xs, SList ys] -> Right $ SList (xs ++ ys)
+        _ -> Left $ RuntimeException "Arguments must be lists"
+    ),
     ( "eval",
       SNativeFn $ NativeFn $ \case
         [x] -> eval x defaultEnv >>= \(result, _) -> Right result
@@ -263,7 +268,7 @@ eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
         ys' <- mapM recQuasiquote ys
         let (results, _) = unzip ys'
         spliced <- splicedResults results
-        Right (SList spliced, env)
+        trace ("spliced: " ++ unpack (toStrict (pShow spliced))) Right (SList spliced, env)
       recQuasiquote y = Right (y, env)
    in recQuasiquote x
 eval (SList [SAtom (ASymbol "and"), a, b]) env = do
@@ -334,12 +339,12 @@ repl env = do
   case parseSExpr input of
     Left err -> pPrint err
     Right e -> do
-      pPrint e
+      -- pPrint e
       case eval e env of
         Left err -> print err
         Right (result, env') -> do
           putStrLn $ unpack (textOfSExpr result) ++ "\n"
-          pPrint env'
+          -- pPrint env'
           repl env'
   repl env
 
