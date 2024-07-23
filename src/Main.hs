@@ -255,7 +255,7 @@ eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
   let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = eval y env
       recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = do
         case eval y env of
-          Right (SList ys, _) -> Right (SList ys, env)
+          Right (SList ys, _) -> Right (SList (SAtom (ASymbol "++") : ys), env)
           _ -> Left $ RuntimeException "Unquote-splicing must evaluate to a list"
       recQuasiquote (SList ys) = do
         let splicedResults [] = Right []

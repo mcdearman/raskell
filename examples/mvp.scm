@@ -197,3 +197,29 @@ x
 
 (macro (defn name args body) `(def ,name (fn ,args ,body)))
 
+(quasiquote (1 2 ,(+ 1 2)))
+
+(macro (quasiquote x)
+  (letrec ((walk (fn (x)
+                   (if (pair? x)
+                       (if (eq? (car x) 'unquote)
+                           (cadr x)
+                           (if (pair? (car x))
+                               (if (eq? (caar x) 'unquote-splicing)
+                                   `(append ,(cadar x) ,(walk (cdr x)))
+                                   `(cons ,(walk (car x)) ,(walk (cdr x))))
+                               `(cons ,(walk (car x)) ,(walk (cdr x)))))
+                       x))))
+    (walk x)))
+
+(macro (quasiquote exprs)
+  (cons 'append (map (lambda (expr)
+                       (cond ((and (cons? expr) (= (car expr) 'unquote))
+                              (list 'list (cadr expr)))
+                             ((and (cons? expr) (= (car expr) 'unquote-splice))
+                              (cadr expr))
+                             ((cons? expr)
+                              (list 'list (list 'quasiquote expr)))
+                             (true
+                              (list 'list (list 'quote expr)))))
+                     exprs)))
