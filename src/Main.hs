@@ -231,7 +231,8 @@ defaultEnv =
 expandMacro :: SExpr -> Env -> Either RuntimeException SExpr
 expandMacro (SList (SAtom (ASymbol name) : args)) env = case lookup name env of
   Just (SLambda params True body) -> do
-    let newEnv = zip params args ++ env
+    eargs <- mapM (`expandMacro` env) args
+    let newEnv = zip params eargs ++ env
     eval body newEnv >>= \(result, _) -> Right result
   _ -> Left $ RuntimeException "Not a macro"
 expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
