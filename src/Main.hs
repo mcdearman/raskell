@@ -1,12 +1,14 @@
 module Main (main) where
 
+import Control.Applicative
+import Data.Ratio
 import Data.Text (Text, pack, unpack)
 import Data.Text.Lazy (toStrict)
 import Data.Void
 import Debug.Trace
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Text.Megaparsec
-  ( MonadParsec (takeWhile1P),
+  ( MonadParsec (takeWhile1P, try),
     ParseErrorBundle,
     Parsec,
     between,
@@ -28,16 +30,12 @@ data SExpr
   | SNativeFn NativeFn
   deriving (Eq, Show)
 
-textOfSExpr :: SExpr -> Text
-textOfSExpr (SAtom (AInt x)) = pack $ show x
-textOfSExpr (SAtom (AReal x)) = pack $ show x
-textOfSExpr (SAtom (AString x)) = pack $ show x
-textOfSExpr (SAtom (ASymbol x)) = x
-textOfSExpr (SAtom (AKeyword x)) = ":" <> x
-textOfSExpr (SList xs) = "(" <> pack (unwords $ map (unpack . textOfSExpr) xs) <> ")"
-textOfSExpr (Cons x y) = "(" <> textOfSExpr x <> " . " <> textOfSExpr y <> ")"
-textOfSExpr (SLambda {}) = "<lambda>"
-textOfSExpr (SNativeFn _) = "<nativeFn>"
+prettySExpr :: SExpr -> Text
+prettySExpr (SAtom x) = prettyAtom x
+prettySExpr (SList xs) = "(" <> pack (unwords $ map (unpack . prettySExpr) xs) <> ")"
+prettySExpr (Cons x y) = "(" <> prettySExpr x <> " . " <> prettySExpr y <> ")"
+prettySExpr (SLambda {}) = "<lambda>"
+prettySExpr (SNativeFn _) = "<nativeFn>"
 
 newtype NativeFn = NativeFn ([SExpr] -> Either RuntimeException SExpr)
 
@@ -48,12 +46,84 @@ instance Show NativeFn where
   show _ = "<nativeFn>"
 
 data Atom
-  = AInt Integer
-  | AReal Double
+  = ANum Number
   | AString String
   | ASymbol Text
   | AKeyword Text
   deriving (Eq, Show)
+
+prettyAtom :: Atom -> Text
+prettyAtom (ANum x) = prettyNumber x
+prettyAtom (AString x) = pack $ show x
+prettyAtom (ASymbol x) = x
+prettyAtom (AKeyword x) = ":" <> x
+
+data Number
+  = Int Integer
+  | Rational Rational
+  | Real Double
+  deriving (Eq, Show)
+
+instance Num Number where
+  Int a + Int b = Int (a + b)
+  Int a + Real b = Real (fromIntegral a + b)
+  Int a + Rational b = Rational (fromIntegral a + b)
+  Real a + Int b = Real (a + fromIntegral b)
+  Real a + Real b = Real (a + b)
+  Real a + Rational b = Real (a + fromRational b)
+  Rational a + Int b = Rational (a + fromIntegral b)
+  Rational a + Real b = Real (fromRational a + b)
+  Rational a + Rational b = Rational (a + b)
+  Int a - Int b = Int (a - b)
+  Int a - Real b = Real (fromIntegral a - b)
+  Int a - Rational b = Rational (fromIntegral a - b)
+  Real a - Int b = Real (a - fromIntegral b)
+  Real a - Real b = Real (a - b)
+  Real a - Rational b = Real (a - fromRational b)
+  Rational a - Int b = Rational (a - fromIntegral b)
+  Rational a - Real b = Real (fromRational a - b)
+  Rational a - Rational b = Rational (a - b)
+  Int a * Int b = Int (a * b)
+  Int a * Real b = Real (fromIntegral a * b)
+  Int a * Rational b = Rational (fromIntegral a * b)
+  Real a * Int b = Real (a * fromIntegral b)
+  Real a * Real b = Real (a * b)
+  Real a * Rational b = Real (a * fromRational b)
+  Rational a * Int b = Rational (a * fromIntegral b)
+  Rational a * Real b = Real (fromRational a * b)
+  Rational a * Rational b = Rational (a * b)
+  abs (Int a) = Int (abs a)
+  abs (Real a) = Real (abs a)
+  abs (Rational a) = Rational (abs a)
+  signum (Int a) = Int (signum a)
+  signum (Real a) = Real (signum a)
+  signum (Rational a) = Rational (signum a)
+  fromInteger = Int
+  negate (Int a) = Int (negate a)
+  negate (Real a) = Real (negate a)
+  negate (Rational a) = Rational (negate a)
+
+instance Fractional Number where
+  Int a / Int b = Rational (a % b)
+  Int a / Real b = Real (fromIntegral a / b)
+  Int a / Rational b = Real (fromIntegral a / fromRational b)
+  Real a / Int b = Real (a / fromIntegral b)
+  Real a / Real b = Real (a / b)
+  Real a / Rational b = Real (a / fromRational b)
+  Rational a / Int b = Rational (a / fromIntegral b)
+  Rational a / Real b = Real (fromRational a / b)
+  Rational a / Rational b = Real (fromRational a / fromRational b)
+  fromRational = Rational
+
+instance Integral Number where
+  toInteger (Int a) = a
+  toInteger (Real a) = truncate a
+  toInteger (Rational a) = truncate (fromRational a)
+
+prettyNumber :: Number -> Text
+prettyNumber (Int x) = pack $ show x
+prettyNumber (Rational x) = pack $ show x
+prettyNumber (Real x) = pack $ show x
 
 type Parser = Parsec Void Text
 
@@ -78,6 +148,9 @@ signedInt = L.signed sc int
 real :: Parser Double
 real = lexeme L.float
 
+num :: Parser Number
+num = try (Int <$> signedInt) <|> try (Real <$> real)
+
 -- Symbols can be any sequence of characters that are not whitespace, parens, or quotes
 symbolParser :: Parser Text
 symbolParser =
@@ -89,7 +162,8 @@ keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
 atom :: Parser Atom
 atom =
   choice
-    [ AInt <$> int,
+    [ -- AReal <$> real,
+      ANum <$> num,
       AString <$> stringLiteral,
       keyword,
       ASymbol <$> symbolParser
@@ -111,7 +185,7 @@ unquoteSplicing :: Parser SExpr
 unquoteSplicing = lexeme ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
 
 list :: Parser SExpr
-list = SList <$> parens (many sexpr)
+list = SList <$> parens (Text.Megaparsec.many sexpr)
 
 sexpr :: Parser SExpr
 sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquoteSplicing, unquote]
@@ -130,33 +204,33 @@ defaultEnv :: Env
 defaultEnv =
   [ ( "+",
       SNativeFn $ NativeFn $ \case
-        (SAtom (AInt a) : xs) -> Right $ SAtom $ AInt $ foldl (\acc (SAtom (AInt x)) -> acc + x) a xs
+        (SAtom (ANum a) : xs) -> Right $ SAtom $ ANum $ foldl (\acc (SAtom (ANum x)) -> acc + x) a xs
         [] -> Left $ RuntimeException "Must have at least one argument"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "-",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a - b
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a - b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "*",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a * b
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a * b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "/",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a `div` b
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a `div` b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "%",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a `mod` b
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a `mod` b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "pow",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a ^ b
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a ^ b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "=",
@@ -171,22 +245,22 @@ defaultEnv =
     ),
     ( ">",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( ">=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "not",
@@ -238,8 +312,7 @@ expandMacro (SList (SAtom (ASymbol name) : args)) env = case lookup name env of
 expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
 
 eval :: SExpr -> Env -> Either RuntimeException (SExpr, Env)
-eval (SAtom (AInt x)) env = Right (SAtom $ AInt x, env)
-eval (SAtom (AReal x)) env = Right (SAtom $ AReal x, env)
+eval (SAtom (ANum x)) env = Right (SAtom $ ANum x, env)
 eval (SAtom (AString x)) env = Right (SAtom $ AString x, env)
 eval (SAtom (AKeyword x)) env = Right (SAtom $ AKeyword x, env)
 eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
@@ -340,11 +413,11 @@ repl env = do
   case parseSExpr input of
     Left err -> pPrint err
     Right e -> do
-      -- pPrint e
+      pPrint e
       case eval e env of
         Left err -> print err
         Right (result, env') -> do
-          putStrLn $ unpack (textOfSExpr result) ++ "\n"
+          putStrLn $ unpack (prettySExpr result) ++ "\n"
           -- pPrint env'
           repl env'
   repl env
