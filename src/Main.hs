@@ -59,71 +59,66 @@ prettyAtom (ASymbol x) = x
 prettyAtom (AKeyword x) = ":" <> x
 
 data Number
-  = Int Integer
-  | Rational Rational
-  | Real Double
+  = NInt Integer
+  | NRational Rational
+  | NReal Double
   deriving (Eq, Show)
 
 instance Num Number where
-  Int a + Int b = Int (a + b)
-  Int a + Real b = Real (fromIntegral a + b)
-  Int a + Rational b = Rational (fromIntegral a + b)
-  Real a + Int b = Real (a + fromIntegral b)
-  Real a + Real b = Real (a + b)
-  Real a + Rational b = Real (a + fromRational b)
-  Rational a + Int b = Rational (a + fromIntegral b)
-  Rational a + Real b = Real (fromRational a + b)
-  Rational a + Rational b = Rational (a + b)
-  Int a - Int b = Int (a - b)
-  Int a - Real b = Real (fromIntegral a - b)
-  Int a - Rational b = Rational (fromIntegral a - b)
-  Real a - Int b = Real (a - fromIntegral b)
-  Real a - Real b = Real (a - b)
-  Real a - Rational b = Real (a - fromRational b)
-  Rational a - Int b = Rational (a - fromIntegral b)
-  Rational a - Real b = Real (fromRational a - b)
-  Rational a - Rational b = Rational (a - b)
-  Int a * Int b = Int (a * b)
-  Int a * Real b = Real (fromIntegral a * b)
-  Int a * Rational b = Rational (fromIntegral a * b)
-  Real a * Int b = Real (a * fromIntegral b)
-  Real a * Real b = Real (a * b)
-  Real a * Rational b = Real (a * fromRational b)
-  Rational a * Int b = Rational (a * fromIntegral b)
-  Rational a * Real b = Real (fromRational a * b)
-  Rational a * Rational b = Rational (a * b)
-  abs (Int a) = Int (abs a)
-  abs (Real a) = Real (abs a)
-  abs (Rational a) = Rational (abs a)
-  signum (Int a) = Int (signum a)
-  signum (Real a) = Real (signum a)
-  signum (Rational a) = Rational (signum a)
-  fromInteger = Int
-  negate (Int a) = Int (negate a)
-  negate (Real a) = Real (negate a)
-  negate (Rational a) = Rational (negate a)
+  NInt a + NInt b = NInt (a + b)
+  NInt a + NReal b = NReal (fromIntegral a + b)
+  NInt a + NRational b = NRational (fromIntegral a + b)
+  NReal a + NInt b = NReal (a + fromIntegral b)
+  NReal a + NReal b = NReal (a + b)
+  NReal a + NRational b = NReal (a + fromRational b)
+  NRational a + NInt b = NRational (a + fromIntegral b)
+  NRational a + NReal b = NReal (fromRational a + b)
+  NRational a + NRational b = NRational (a + b)
+  NInt a - NInt b = NInt (a - b)
+  NInt a - NReal b = NReal (fromIntegral a - b)
+  NInt a - NRational b = NRational (fromIntegral a - b)
+  NReal a - NInt b = NReal (a - fromIntegral b)
+  NReal a - NReal b = NReal (a - b)
+  NReal a - NRational b = NReal (a - fromRational b)
+  NRational a - NInt b = NRational (a - fromIntegral b)
+  NRational a - NReal b = NReal (fromRational a - b)
+  NRational a - NRational b = NRational (a - b)
+  NInt a * NInt b = NInt (a * b)
+  NInt a * NReal b = NReal (fromIntegral a * b)
+  NInt a * NRational b = NRational (fromIntegral a * b)
+  NReal a * NInt b = NReal (a * fromIntegral b)
+  NReal a * NReal b = NReal (a * b)
+  NReal a * NRational b = NReal (a * fromRational b)
+  NRational a * NInt b = NRational (a * fromIntegral b)
+  NRational a * NReal b = NReal (fromRational a * b)
+  NRational a * NRational b = NRational (a * b)
+  abs (NInt a) = NInt (abs a)
+  abs (NReal a) = NReal (abs a)
+  abs (NRational a) = NRational (abs a)
+  signum (NInt a) = NInt (signum a)
+  signum (NReal a) = NReal (signum a)
+  signum (NRational a) = NRational (signum a)
+  fromInteger = NInt
+  negate (NInt a) = NInt (negate a)
+  negate (NReal a) = NReal (negate a)
+  negate (NRational a) = NRational (negate a)
 
 instance Fractional Number where
-  Int a / Int b = Rational (a % b)
-  Int a / Real b = Real (fromIntegral a / b)
-  Int a / Rational b = Real (fromIntegral a / fromRational b)
-  Real a / Int b = Real (a / fromIntegral b)
-  Real a / Real b = Real (a / b)
-  Real a / Rational b = Real (a / fromRational b)
-  Rational a / Int b = Rational (a / fromIntegral b)
-  Rational a / Real b = Real (fromRational a / b)
-  Rational a / Rational b = Real (fromRational a / fromRational b)
-  fromRational = Rational
-
-instance Integral Number where
-  toInteger (Int a) = a
-  toInteger (Real a) = truncate a
-  toInteger (Rational a) = truncate (fromRational a)
+  NInt a / NInt b = NRational (a % b)
+  NInt a / NReal b = NReal (fromIntegral a / b)
+  NInt a / NRational b = NReal (fromIntegral a / fromRational b)
+  NReal a / NInt b = NReal (a / fromIntegral b)
+  NReal a / NReal b = NReal (a / b)
+  NReal a / NRational b = NReal (a / fromRational b)
+  NRational a / NInt b = NRational (a / fromIntegral b)
+  NRational a / NReal b = NReal (fromRational a / b)
+  NRational a / NRational b = NReal (fromRational a / fromRational b)
+  fromRational = NRational
 
 prettyNumber :: Number -> Text
-prettyNumber (Int x) = pack $ show x
-prettyNumber (Rational x) = pack $ show x
-prettyNumber (Real x) = pack $ show x
+prettyNumber (NInt x) = pack $ show x
+prettyNumber (NRational x) = pack $ show x
+prettyNumber (NReal x) = pack $ show x
 
 type Parser = Parsec Void Text
 
@@ -149,7 +144,7 @@ real :: Parser Double
 real = lexeme L.float
 
 num :: Parser Number
-num = try (Int <$> signedInt) <|> try (Real <$> real)
+num = try (NInt <$> signedInt) <|> try (NReal <$> real)
 
 -- Symbols can be any sequence of characters that are not whitespace, parens, or quotes
 symbolParser :: Parser Text
@@ -220,17 +215,25 @@ defaultEnv =
     ),
     ( "/",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a `div` b
+        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
+          (NInt a, NInt b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NReal $ fromIntegral a / fromIntegral b
+          (NReal a, NReal b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NReal $ a / b
+          (NRational a, NRational b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NRational $ a / b
+          (_, _) -> Left $ RuntimeException "Arguments must be same type"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "%",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a `mod` b
+        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
+          (NInt a, NInt b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NInt $ a `mod` b
+          _ -> Left $ RuntimeException "Arguments must be integers"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "pow",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a ^ b
+        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
+          (NInt a, NInt b) -> Right $ SAtom $ ANum $ NInt $ a ^ b
+          _ -> Left $ RuntimeException "Arguments must be integers"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "=",
@@ -245,22 +248,38 @@ defaultEnv =
     ),
     ( ">",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
+          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
+          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
+          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
+          (_, _) -> Left $ RuntimeException "Arguments must be same type"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( ">=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
+          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
+          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
+          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
+          (_, _) -> Left $ RuntimeException "Arguments must be same type"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
+          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
+          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
+          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
+          (_, _) -> Left $ RuntimeException "Arguments must be same type"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
+        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
+          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
+          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
+          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
+          (_, _) -> Left $ RuntimeException "Arguments must be same type"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "not",
