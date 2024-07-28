@@ -1,9 +1,10 @@
 module Main (main) where
 
-import Control.Applicative
+import Control.Applicative hiding (many)
 import Data.Ratio
 import Data.Text (Text, pack, unpack)
 import Data.Text.Lazy (toStrict)
+import Data.Type.Coercion (sym)
 import Data.Void
 import Debug.Trace
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
@@ -16,6 +17,7 @@ import Text.Megaparsec
     empty,
     many,
     manyTill,
+    oneOf,
     parse,
   )
 import Text.Megaparsec.Char
@@ -144,12 +146,25 @@ real :: Parser Double
 real = lexeme L.float
 
 num :: Parser Number
-num = try (NInt <$> signedInt) <|> try (NReal <$> real)
+num = try (NReal <$> real) <|> try (NInt <$> signedInt)
 
--- Symbols can be any sequence of characters that are not whitespace, parens, or quotes
+-- Symbols must start with an alphabetic character or one of the following:
+-- + - * / = < > ! ? $ % & ^ _ ~
+-- The remaining characters can be any sequence of
+-- characters that are not whitespace, parens, or quotes.
+
 symbolParser :: Parser Text
 symbolParser =
-  lexeme $ takeWhile1P (Just "symbol") (\c -> c `notElem` [' ', '\n', '\r', '\t', '(', ')', '\'', '`', ','])
+  lexeme $
+    pack
+      <$> ( (:)
+              <$> (letterChar <|> oneOf ['+', '-', '*', '/', '=', '<', '>', '!', '?', '$', '%', '&', '^', '_', '~'])
+              <*> many (alphaNumChar <|> oneOf ['+', '-', '*', '/', '=', '<', '>', '!', '?', '$', '%', '&', '^', '_', '~'])
+          )
+
+-- symbolParser :: Parser Text
+-- symbolParser =
+--   lexeme $ takeWhile1P (Just "symbol") (\c -> c `notElem` [' ', '\n', '\r', '\t', '(', ')', '\'', '`', ','])
 
 keyword :: Parser Atom
 keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
@@ -157,8 +172,7 @@ keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
 atom :: Parser Atom
 atom =
   choice
-    [ -- AReal <$> real,
-      ANum <$> num,
+    [ ANum <$> num,
       AString <$> stringLiteral,
       keyword,
       ASymbol <$> symbolParser
