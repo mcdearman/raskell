@@ -17,6 +17,10 @@ executable raskell
     import:           warnings
     main-is:          Main.hs
     other-modules: 
+        Parser
+        Eval
+        RuntimeException
+        SExpr
 
     default-extensions: 
         OverloadedStrings
