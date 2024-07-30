@@ -11,17 +11,16 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 
 common warnings
-    ghc-options: -Wall -Werror=missing-signatures -Werror=incomplete-patterns
+    ghc-options: -Wall -Werror=missing-signatures -Werror=incomplete-patterns -Werror=incomplete-uni-patterns
 
 executable raskell
     import:           warnings
     main-is:          Main.hs
     other-modules: 
-        Parser
+        Reader
         Eval
         RuntimeException
         SExpr
-
     default-extensions: 
         OverloadedStrings
         ScopedTypeVariables
