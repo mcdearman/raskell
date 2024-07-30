@@ -215,12 +215,12 @@ x
     (walk x)))
 
 (macro (quasiquote exprs)
-  (cons 'append (map (lambda (expr)
-                       (cond ((and (cons? expr) (= (car expr) 'unquote))
+  (pair 'append (map (lambda (expr)
+                       (cond ((and (pair? expr) (= (car expr) 'unquote))
                               (list 'list (cadr expr)))
-                             ((and (cons? expr) (= (car expr) 'unquote-splice))
+                             ((and (pair? expr) (= (car expr) 'unquote-splice))
                               (cadr expr))
-                             ((cons? expr)
+                             ((pair? expr)
                               (list 'list (list 'quasiquote expr)))
                              (true
                               (list 'list (list 'quote expr)))))

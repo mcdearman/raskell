@@ -170,26 +170,40 @@ eval (SList [SAtom (ASymbol "macro"), SList (SAtom (ASymbol name) : params), bod
   let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) True body
    in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
-eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
-  let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = eval y env
-      recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = do
-        case eval y env of
-          Right (SList ys, _) -> Right (SList (SAtom (ASymbol "++") : ys), env)
-          _ -> Left $ RuntimeException "Unquote-splicing must evaluate to a list"
-      recQuasiquote (SList ys) = do
-        let splicedResults [] = Right []
-            splicedResults (SList spliced : rest) = do
-              rest' <- splicedResults rest
-              Right (spliced ++ rest')
-            splicedResults (y : rest) = do
-              rest' <- splicedResults rest
-              Right (y : rest')
-        ys' <- mapM recQuasiquote ys
-        let (results, _) = unzip ys'
-        spliced <- splicedResults results
-        trace ("spliced: " ++ unpack (toStrict (pShow spliced))) Right (SList spliced, env)
-      recQuasiquote y = Right (y, env)
-   in recQuasiquote x
+eval (SList [SAtom (ASymbol "quasiquote"), x]) env = eval (expandQuasiquote x) env
+  where
+    expandQuasiquote :: SExpr -> SExpr
+    expandQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = y
+    expandQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) =
+      SList [SAtom (ASymbol "++"), y]
+    expandQuasiquote (SList []) = SList [SAtom (ASymbol "quote"), SList []]
+    expandQuasiquote (SList xs) =
+      SList
+        [ SAtom (ASymbol "pair"),
+          expandQuasiquote (head xs),
+          expandQuasiquote (SList (tail xs))
+        ]
+    expandQuasiquote other = SList [SAtom (ASymbol "quote"), other]
+-- eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
+--   let recQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = eval y env
+--       recQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) = do
+--         case eval y env of
+--           Right (SList ys, _) -> Right (SList (SAtom (ASymbol "++") : ys), env)
+--           _ -> Left $ RuntimeException "Unquote-splicing must evaluate to a list"
+--       recQuasiquote (SList ys) = do
+--         let splicedResults [] = Right []
+--             splicedResults (SList spliced : rest) = do
+--               rest' <- splicedResults rest
+--               Right (spliced ++ rest')
+--             splicedResults (y : rest) = do
+--               rest' <- splicedResults rest
+--               Right (y : rest')
+--         ys' <- mapM recQuasiquote ys
+--         let (results, _) = unzip ys'
+--         spliced <- splicedResults results
+--         trace ("spliced: " ++ unpack (toStrict (pShow spliced))) Right (SList spliced, env)
+--       recQuasiquote y = Right (y, env)
+--    in recQuasiquote x
 eval (SList [SAtom (ASymbol "and"), a, b]) env = do
   (a', _) <- eval a env
   case a' of
