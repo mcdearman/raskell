@@ -2,7 +2,7 @@ module Main (main) where
 
 import Data.Text (pack, unpack)
 import Eval
-import Parser
+import Reader
 import SExpr
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Text.Pretty.Simple (pPrint)

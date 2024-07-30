@@ -1,6 +1,6 @@
-module Parser where
+module Reader where
 
-import Control.Applicative hiding (many)
+import Control.Applicative (empty, (<|>))
 import Data.Text (Text, pack)
 import Data.Void
 import SExpr

@@ -209,7 +209,7 @@ eval sexpr@(SList (fn : args)) env = do
     SLambda params False body -> do
       let newEnv = zip params args' ++ fn_env
       eval body newEnv
-    SLambda params True body -> do
+    SLambda _ True _ -> do
       m <- trace "expansion: " (expandMacro sexpr fn_env)
       eval m env
     SNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
