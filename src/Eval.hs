@@ -13,26 +13,46 @@ defaultEnv :: Env
 defaultEnv =
   [ ( "+",
       SNativeFn $ NativeFn $ \case
-        (SAtom (AInt a) : xs) -> Right $ SAtom $ AInt $ foldl (\acc (SAtom (AInt x)) -> acc + x) a xs
+        (SAtom (AInt a) : xs) ->
+          let foldInts acc = \case
+                (SAtom (AInt x) : xs') -> foldInts (acc + x) xs'
+                [] -> Right $ SAtom $ AInt acc
+                _ -> Left $ RuntimeException "Arguments must be integers"
+           in foldInts a xs
         [] -> Left $ RuntimeException "Must have at least one argument"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "-",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a - b
+        (SAtom (AInt a) : xs) ->
+          let foldInts acc = \case
+                (SAtom (AInt x) : xs') -> foldInts (acc - x) xs'
+                [] -> Right $ SAtom $ AInt acc
+                _ -> Left $ RuntimeException "Arguments must be integers"
+           in foldInts a xs
+        [] -> Left $ RuntimeException "Must have at least one argument"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "*",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a * b
+        (SAtom (AInt a) : xs) ->
+          let foldInts acc = \case
+                (SAtom (AInt x) : xs') -> foldInts (acc * x) xs'
+                [] -> Right $ SAtom $ AInt acc
+                _ -> Left $ RuntimeException "Arguments must be integers"
+           in foldInts a xs
+        [] -> Left $ RuntimeException "Must have at least one argument"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "/",
       SNativeFn $ NativeFn $ \case
-        [SAtom (AInt a), SAtom (AInt b)] ->
-          if b == 0
-            then Left $ RuntimeException "Division by zero"
-            else Right $ SAtom $ AInt $ a `div` b
+        (SAtom (AInt a) : xs) ->
+          let foldInts acc = \case
+                SAtom (AInt 0) : _ -> Left $ RuntimeException "Division by zero"
+                (SAtom (AInt x) : xs') -> foldInts (acc `div` x) xs'
+                [] -> Right $ SAtom $ AInt acc
+                _ -> Left $ RuntimeException "Arguments must be integers"
+           in foldInts a xs
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "%",
