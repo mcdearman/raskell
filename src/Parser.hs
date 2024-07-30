@@ -1,21 +1,26 @@
 module Parser where
 
+import Control.Applicative hiding (many)
 import Data.Text (Text, pack)
 import Data.Void
 import SExpr
 import Text.Megaparsec
-  ( MonadParsec (try),
+  ( MonadParsec (notFollowedBy, try),
     ParseErrorBundle,
     Parsec,
     between,
     choice,
-    empty,
     many,
     manyTill,
-    oneOf,
     parse,
+    satisfy,
   )
 import Text.Megaparsec.Char
+  ( alphaNumChar,
+    char,
+    letterChar,
+    space1,
+  )
 import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser = Parsec Void Text
@@ -36,13 +41,7 @@ int :: Parser Integer
 int = lexeme L.decimal
 
 signedInt :: Parser Integer
-signedInt = L.signed sc int
-
-real :: Parser Double
-real = lexeme L.float
-
-num :: Parser Number
-num = try (NReal <$> real) <|> try (NInt <$> signedInt)
+signedInt = lexeme $ L.signed (notFollowedBy space1) int
 
 -- Symbols must start with an alphabetic character or one of the following:
 -- + - * / = < > ! ? $ % & ^ _ ~
@@ -51,16 +50,10 @@ num = try (NReal <$> real) <|> try (NInt <$> signedInt)
 
 symbolParser :: Parser Text
 symbolParser =
-  lexeme $
-    pack
-      <$> ( (:)
-              <$> (letterChar <|> oneOf ['+', '-', '*', '/', '=', '<', '>', '!', '?', '$', '%', '&', '^', '_', '~'])
-              <*> many (alphaNumChar <|> oneOf ['+', '-', '*', '/', '=', '<', '>', '!', '?', '$', '%', '&', '^', '_', '~'])
-          )
-
--- symbolParser :: Parser Text
--- symbolParser =
---   lexeme $ takeWhile1P (Just "symbol") (\c -> c `notElem` [' ', '\n', '\r', '\t', '(', ')', '\'', '`', ','])
+  lexeme $ pack <$> ((:) <$> symbolStartChar <*> many symbolChar)
+  where
+    symbolStartChar = letterChar <|> satisfy (`elem` ("+-*/=<>!?$%&^_~" :: String))
+    symbolChar = alphaNumChar <|> satisfy (`notElem` (" \n\t\r()'`," :: String))
 
 keyword :: Parser Atom
 keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
@@ -68,10 +61,9 @@ keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
 atom :: Parser Atom
 atom =
   choice
-    [ ANum <$> num,
+    [ try (AInt <$> signedInt) <|> (ASymbol <$> symbolParser),
       AString <$> stringLiteral,
-      keyword,
-      ASymbol <$> symbolParser
+      keyword
     ]
 
 parens :: Parser a -> Parser a
@@ -90,7 +82,7 @@ unquoteSplicing :: Parser SExpr
 unquoteSplicing = lexeme ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
 
 list :: Parser SExpr
-list = SList <$> parens (Text.Megaparsec.many sexpr)
+list = SList <$> parens (many sexpr)
 
 sexpr :: Parser SExpr
 sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquoteSplicing, unquote]

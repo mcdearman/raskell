@@ -13,41 +13,36 @@ defaultEnv :: Env
 defaultEnv =
   [ ( "+",
       SNativeFn $ NativeFn $ \case
-        (SAtom (ANum a) : xs) -> Right $ SAtom $ ANum $ foldl (\acc (SAtom (ANum x)) -> acc + x) a xs
+        (SAtom (AInt a) : xs) -> Right $ SAtom $ AInt $ foldl (\acc (SAtom (AInt x)) -> acc + x) a xs
         [] -> Left $ RuntimeException "Must have at least one argument"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "-",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a - b
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a - b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "*",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> Right $ SAtom $ ANum $ a * b
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a * b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "/",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
-          (NInt a, NInt b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NReal $ fromIntegral a / fromIntegral b
-          (NReal a, NReal b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NReal $ a / b
-          (NRational a, NRational b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NRational $ a / b
-          (_, _) -> Left $ RuntimeException "Arguments must be same type"
+        [SAtom (AInt a), SAtom (AInt b)] ->
+          if b == 0
+            then Left $ RuntimeException "Division by zero"
+            else Right $ SAtom $ AInt $ a `div` b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "%",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
-          (NInt a, NInt b) -> if b == 0 then Left $ RuntimeException "Division by zero" else Right $ SAtom $ ANum $ NInt $ a `mod` b
-          _ -> Left $ RuntimeException "Arguments must be integers"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a `mod` b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "pow",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
-          (NInt a, NInt b) -> Right $ SAtom $ ANum $ NInt $ a ^ b
-          _ -> Left $ RuntimeException "Arguments must be integers"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AInt $ a ^ b
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "=",
@@ -62,38 +57,22 @@ defaultEnv =
     ),
     ( ">",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
-          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
-          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
-          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
-          (_, _) -> Left $ RuntimeException "Arguments must be same type"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a > b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( ">=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
-          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
-          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
-          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
-          (_, _) -> Left $ RuntimeException "Arguments must be same type"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a >= b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
-          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
-          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
-          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
-          (_, _) -> Left $ RuntimeException "Arguments must be same type"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a < b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "<=",
       SNativeFn $ NativeFn $ \case
-        [SAtom (ANum a), SAtom (ANum b)] -> case (a, b) of
-          (NInt a, NInt b) -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
-          (NReal a, NReal b) -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
-          (NRational a, NRational b) -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
-          (_, _) -> Left $ RuntimeException "Arguments must be same type"
+        [SAtom (AInt a), SAtom (AInt b)] -> Right $ SAtom $ AKeyword $ if a <= b then "t" else "f"
         _ -> Left $ RuntimeException "Arguments must be integers"
     ),
     ( "not",
@@ -145,7 +124,7 @@ expandMacro (SList (SAtom (ASymbol name) : args)) env = case lookup name env of
 expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
 
 eval :: SExpr -> Env -> Either RuntimeException (SExpr, Env)
-eval (SAtom (ANum x)) env = Right (SAtom $ ANum x, env)
+eval (SAtom (AInt x)) env = Right (SAtom $ AInt x, env)
 eval (SAtom (AString x)) env = Right (SAtom $ AString x, env)
 eval (SAtom (AKeyword x)) env = Right (SAtom $ AKeyword x, env)
 eval (SList [SAtom (ASymbol "def"), SAtom (ASymbol name), value]) env = do
