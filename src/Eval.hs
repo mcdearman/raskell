@@ -107,6 +107,19 @@ defaultEnv =
         [SList _] -> Right $ SAtom $ AKeyword "f"
         _ -> Left $ RuntimeException "Argument must be a list"
     ),
+    ( "pair?",
+      SNativeFn $ NativeFn $ \case
+        [SList (_ : _)] -> Right $ SAtom $ AKeyword "t"
+        [_] -> Right $ SAtom $ AKeyword "f"
+        _ -> Left $ RuntimeException "Must have exactly one argument"
+    ),
+    ( "atom?",
+      SNativeFn $ NativeFn $ \case
+        [SAtom _] -> Right $ SAtom $ AKeyword "t"
+        [SList []] -> Right $ SAtom $ AKeyword "t"
+        [SList _] -> Right $ SAtom $ AKeyword "f"
+        _ -> Left $ RuntimeException "Must have exactly one argument"
+    ),
     ( "pair",
       SNativeFn $ NativeFn $ \case
         [a, SList b] -> Right $ SList (a : b)
