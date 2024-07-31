@@ -15,7 +15,7 @@ repl env = do
   case readSExpr input of
     Left err -> pPrint err
     Right e -> do
-      -- pPrint e
+      pPrint e
       case eval e env of
         Left err -> print err
         Right (result, env') -> do

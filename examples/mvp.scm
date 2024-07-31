@@ -93,6 +93,8 @@ x
 
 ; Unquote-splicing
 `(1 2 ,@(list 3 4))
+; expands to
+()
 ; => (1 2 3 4)
 
 ; Symbol

@@ -138,7 +138,7 @@ defaultEnv =
     ( "++",
       SNativeFn $ NativeFn $ \case
         [SList xs, SList ys] -> Right $ SList (xs ++ ys)
-        _ -> Left $ RuntimeException "Arguments must be lists"
+        _ -> Left $ RuntimeException "Arguments to ++ must be lists"
     ),
     ( "eval",
       SNativeFn $ NativeFn $ \case
@@ -170,7 +170,9 @@ eval (SList [SAtom (ASymbol "macro"), SList (SAtom (ASymbol name) : params), bod
   let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) True body
    in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
-eval (SList [SAtom (ASymbol "quasiquote"), x]) env = eval (expandQuasiquote x) env
+eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
+  let expanded = expandQuasiquote x
+   in trace ("expanded: " ++ unpack (toStrict (pShow expanded))) (Right (expanded, env))
   where
     expandQuasiquote :: SExpr -> SExpr
     expandQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = y
