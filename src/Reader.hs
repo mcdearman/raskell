@@ -1,4 +1,4 @@
-module Reader where
+module Reader (readSExpr) where
 
 import Control.Applicative (empty, (<|>))
 import Data.Text (Text, pack)
@@ -48,20 +48,20 @@ signedInt = lexeme $ L.signed (notFollowedBy space1) int
 -- The remaining characters can be any sequence of
 -- characters that are not whitespace, parens, or quotes.
 
-symbolParser :: Parser Text
-symbolParser =
+readSymbol :: Parser Text
+readSymbol =
   lexeme $ pack <$> ((:) <$> symbolStartChar <*> many symbolChar)
   where
     symbolStartChar = letterChar <|> satisfy (`elem` ("+-*/=<>!?$%&^_~" :: String))
     symbolChar = alphaNumChar <|> satisfy (`notElem` (" \n\t\r()'`," :: String))
 
 keyword :: Parser Atom
-keyword = lexeme (char ':' *> (AKeyword <$> symbolParser))
+keyword = lexeme (char ':' *> (AKeyword <$> readSymbol))
 
 atom :: Parser Atom
 atom =
   choice
-    [ try (AInt <$> signedInt) <|> (ASymbol <$> symbolParser),
+    [ try (AInt <$> signedInt) <|> (ASymbol <$> readSymbol),
       AString <$> stringLiteral,
       keyword
     ]
@@ -87,5 +87,5 @@ list = SList <$> parens (many sexpr)
 sexpr :: Parser SExpr
 sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquoteSplicing, unquote]
 
-parseSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
-parseSExpr = parse sexpr ""
+readSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
+readSExpr = parse sexpr ""

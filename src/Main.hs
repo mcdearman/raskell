@@ -12,7 +12,7 @@ repl env = do
   hSetBuffering stdout NoBuffering
   putStr "> "
   input <- pack <$> getLine
-  case parseSExpr input of
+  case readSExpr input of
     Left err -> pPrint err
     Right e -> do
       -- pPrint e
