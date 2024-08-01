@@ -199,7 +199,13 @@ x
 
 `(1 2 ,@(map id '(3 4)))
 
+; simple macro examples
+
 (macro (defn name args body) `(def ,name (fn ,args ,body)))
+
+(defn add (x y) (+ x y))
+
+(macro (when test body) `(if ,test ,body))
 
 (quasiquote (1 2 ,(+ 1 2)))
 

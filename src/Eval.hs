@@ -171,9 +171,10 @@ eval (SList [SAtom (ASymbol "macro"), SList (SAtom (ASymbol name) : params), bod
    in Right (lam, (name, lam) : env)
 eval (SList [SAtom (ASymbol "quote"), x]) env = Right (x, env)
 eval (SList [SAtom (ASymbol "quasiquote"), x]) env =
-  let expanded = expandQuasiquote x
-   in trace ("expanded: " ++ unpack (toStrict (pShow expanded))) (Right (expanded, env))
+  trace ("expanded: " ++ unpack (toStrict (pShow expanded))) (Right (expanded, env))
   where
+    expanded = expandQuasiquote x
+
     expandQuasiquote :: SExpr -> SExpr
     expandQuasiquote (SList [SAtom (ASymbol "unquote"), y]) = y
     expandQuasiquote (SList [SAtom (ASymbol "unquote-splicing"), y]) =

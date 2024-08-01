@@ -6,7 +6,6 @@ import RuntimeException (RuntimeException)
 data SExpr
   = SAtom Atom
   | SList [SExpr]
-  | Cons SExpr SExpr
   | SLambda [Text] Bool SExpr
   | SNativeFn NativeFn
   deriving (Eq, Show)
@@ -14,7 +13,6 @@ data SExpr
 prettySExpr :: SExpr -> Text
 prettySExpr (SAtom x) = prettyAtom x
 prettySExpr (SList xs) = "(" <> pack (unwords $ map (unpack . prettySExpr) xs) <> ")"
-prettySExpr (Cons x y) = "(" <> prettySExpr x <> " . " <> prettySExpr y <> ")"
 prettySExpr (SLambda {}) = "<lambda>"
 prettySExpr (SNativeFn _) = "<nativeFn>"
 
