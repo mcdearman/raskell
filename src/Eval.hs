@@ -147,8 +147,8 @@ defaultEnv =
     )
   ]
 
-expandMacro :: SExpr -> Env -> Either RuntimeException SExpr
-expandMacro (SList (SAtom (ASymbol name) : args)) env = case lookup name env of
+expandMacro :: Spanned SExpr -> Env -> Either RuntimeException SExpr
+expandMacro (Spanned (SList (Spanned (SAtom (ASymbol name)) _) : args) _) env = case lookup name env of
   Just (SLambda params True body) -> do
     eargs <- mapM (`expandMacro` env) args
     let newEnv = zip params eargs ++ env

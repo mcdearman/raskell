@@ -10,6 +10,8 @@ import Text.Megaparsec
     Parsec,
     between,
     choice,
+    getOffset,
+    getSourcePos,
     many,
     manyTill,
     parse,
@@ -18,12 +20,19 @@ import Text.Megaparsec
 import Text.Megaparsec.Char
   ( alphaNumChar,
     char,
+    char',
     letterChar,
     space1,
   )
 import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser = Parsec Void Text
+
+withSpan :: Parser a -> Parser (Spanned a)
+withSpan p = do
+  startPos <- getOffset
+  result <- p
+  Spanned result . Span startPos <$> getOffset
 
 sc :: Parser ()
 sc = L.space space1 (L.skipLineComment ";") empty
@@ -34,11 +43,20 @@ lexeme = L.lexeme sc
 symbol :: Text -> Parser Text
 symbol = L.symbol sc
 
+-- symbol :: Text -> Parser (WithSpan Text)
+-- symbol sym = withSpan (L.symbol sc sym)
+
 stringLiteral :: Parser String
 stringLiteral = char '\"' *> manyTill L.charLiteral (char '\"')
 
+octal :: Parser Integer
+octal = char '0' >> char' 'o' >> L.octal
+
+hexadecimal :: Parser Integer
+hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
+
 int :: Parser Integer
-int = lexeme L.decimal
+int = lexeme (try octal <|> try hexadecimal <|> try L.decimal)
 
 signedInt :: Parser Integer
 signedInt = lexeme $ L.signed (notFollowedBy space1) int
@@ -69,23 +87,23 @@ atom =
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
-quote :: Parser SExpr
+quote :: Parser (Spanned SExpr)
 quote = char '\'' *> (SList . (SAtom (ASymbol "quote") :) . pure <$> sexpr)
 
-quasiquote :: Parser SExpr
+quasiquote :: Parser (Spanned SExpr)
 quasiquote = char '`' *> (SList . (SAtom (ASymbol "quasiquote") :) . pure <$> sexpr)
 
-unquote :: Parser SExpr
+unquote :: Parser (Spanned SExpr)
 unquote = char ',' *> (SList . (SAtom (ASymbol "unquote") :) . pure <$> sexpr)
 
-unquoteSplicing :: Parser SExpr
+unquoteSplicing :: Parser (Spanned SExpr)
 unquoteSplicing = lexeme ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
 
-list :: Parser SExpr
-list = SList <$> parens (many sexpr)
+list :: Parser (Spanned SExpr)
+list = withSpan (SList <$> parens (many sexpr))
 
-sexpr :: Parser SExpr
+sexpr :: Parser (Spanned SExpr)
 sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquoteSplicing, unquote]
 
-readSExpr :: Text -> Either (ParseErrorBundle Text Void) SExpr
+readSExpr :: Text -> Either (ParseErrorBundle Text Void) (Spanned SExpr)
 readSExpr = parse sexpr ""
