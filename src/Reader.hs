@@ -11,7 +11,6 @@ import Text.Megaparsec
     between,
     choice,
     getOffset,
-    getSourcePos,
     many,
     manyTill,
     parse,
@@ -42,9 +41,6 @@ lexeme = L.lexeme sc
 
 symbol :: Text -> Parser Text
 symbol = L.symbol sc
-
--- symbol :: Text -> Parser (WithSpan Text)
--- symbol sym = withSpan (L.symbol sc sym)
 
 stringLiteral :: Parser String
 stringLiteral = char '\"' *> manyTill L.charLiteral (char '\"')
@@ -79,7 +75,7 @@ keyword = lexeme (char ':' *> (AKeyword <$> readSymbol))
 atom :: Parser Atom
 atom =
   choice
-    [ try (AInt <$> signedInt) <|> (ASymbol <$> readSymbol),
+    [ try (AInt <$> signedInt) <|> try (ASymbol <$> readSymbol),
       AString <$> stringLiteral,
       keyword
     ]

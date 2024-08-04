@@ -43,6 +43,7 @@ instance Show NativeFn where
 
 data Atom
   = AInt Integer
+  | AReal Double
   | AString String
   | ASymbol Text
   | AKeyword Text
