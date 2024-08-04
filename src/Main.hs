@@ -14,9 +14,9 @@ repl env = do
   input <- pack <$> getLine
   case readSExpr input of
     Left err -> pPrint err
-    Right e -> do
-      pPrint e
-      case eval e env of
+    Right s -> do
+      pPrint s
+      case eval s env of
         Left err -> print err
         Right (result, env') -> do
           putStrLn $ unpack (prettySExpr result) ++ "\n"

@@ -17,6 +17,9 @@ data Spanned a = Spanned
   }
   deriving (Show, Eq)
 
+prettySpanned :: (Show a) => Spanned a -> Text
+prettySpanned (Spanned val (Span s e)) = pack $ show val ++ " @ " ++ show s ++ ".." ++ show e
+
 data SExpr
   = SAtom Atom
   | SList [Spanned SExpr]
@@ -24,13 +27,13 @@ data SExpr
   | SNativeFn NativeFn
   deriving (Eq, Show)
 
-prettySExpr :: Spanned SExpr -> Text
-prettySExpr (Spanned (SAtom x) s) = prettyAtom x <> " @ " <> pack (show s)
-prettySExpr (Spanned (SList xs) s) = "(" <> pack (unwords $ map (unpack . prettySExpr) xs) <> ") @ " <> pack (show s)
-prettySExpr (Spanned (SLambda {}) s) = "<lambda> @ " <> pack (show s)
-prettySExpr (Spanned (SNativeFn _) s) = "<nativeFn> @ " <> pack (show s)
+prettySExpr :: SExpr -> Text
+prettySExpr (SAtom x) = prettyAtom x
+prettySExpr (SList xs) = "(" <> pack (unwords $ map (unpack . prettySExpr . value) xs) <> ")"
+prettySExpr (SLambda {}) = "<lambda>"
+prettySExpr (SNativeFn _) = "<nativeFn>"
 
-newtype NativeFn = NativeFn ([SExpr] -> Either RuntimeException SExpr)
+newtype NativeFn = NativeFn ([Spanned SExpr] -> Either RuntimeException (Spanned SExpr))
 
 instance Eq NativeFn where
   _ == _ = False

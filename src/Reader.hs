@@ -88,22 +88,48 @@ parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
 quote :: Parser (Spanned SExpr)
-quote = char '\'' *> (SList . (SAtom (ASymbol "quote") :) . pure <$> sexpr)
+quote = withSpan $ do
+  ch <- withSpan $ char '\''
+  expr <- sexpr
+  return $ SList [Spanned (SAtom (ASymbol "quote")) (SExpr.span ch), expr]
 
+-- quasiquote :: Parser (Spanned SExpr)
+-- quasiquote = char '`' *> (SList . (SAtom (ASymbol "quasiquote") :) . pure <$> sexpr)
 quasiquote :: Parser (Spanned SExpr)
-quasiquote = char '`' *> (SList . (SAtom (ASymbol "quasiquote") :) . pure <$> sexpr)
+quasiquote = withSpan $ do
+  ch <- withSpan $ char '`'
+  expr <- sexpr
+  return $ SList [Spanned (SAtom (ASymbol "quasiquote")) (SExpr.span ch), expr]
 
+-- unquote :: Parser (Spanned SExpr)
+-- unquote = char ',' *> (SList . (SAtom (ASymbol "unquote") :) . pure <$> sexpr)
 unquote :: Parser (Spanned SExpr)
-unquote = char ',' *> (SList . (SAtom (ASymbol "unquote") :) . pure <$> sexpr)
+unquote = withSpan $ do
+  ch <- withSpan $ char '`'
+  expr <- sexpr
+  return $ SList [Spanned (SAtom (ASymbol "unquote")) (SExpr.span ch), expr]
 
+-- unquoteSplicing :: Parser (Spanned SExpr)
+-- unquoteSplicing = lexeme ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
 unquoteSplicing :: Parser (Spanned SExpr)
-unquoteSplicing = lexeme ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
+unquoteSplicing = withSpan $ do
+  ch <- withSpan $ char '`'
+  expr <- sexpr
+  return $ SList [Spanned (SAtom (ASymbol "unquote-splicing")) (SExpr.span ch), expr]
 
 list :: Parser (Spanned SExpr)
 list = withSpan (SList <$> parens (many sexpr))
 
 sexpr :: Parser (Spanned SExpr)
-sexpr = choice [SAtom <$> atom, list, quote, quasiquote, unquoteSplicing, unquote]
+sexpr =
+  choice
+    [ withSpan (SAtom <$> atom),
+      list,
+      quote,
+      quasiquote,
+      unquoteSplicing,
+      unquote
+    ]
 
 readSExpr :: Text -> Either (ParseErrorBundle Text Void) (Spanned SExpr)
 readSExpr = parse sexpr ""

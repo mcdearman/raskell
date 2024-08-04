@@ -127,7 +127,7 @@ defaultEnv =
     ),
     ( "head",
       SNativeFn $ NativeFn $ \case
-        [SList (x : _)] -> Right x
+        [SList (x : _)] -> Right (value x)
         _ -> Left $ RuntimeException "Argument must be a non-empty list"
     ),
     ( "tail",
@@ -142,21 +142,21 @@ defaultEnv =
     ),
     ( "eval",
       SNativeFn $ NativeFn $ \case
-        [x] -> eval x defaultEnv >>= \(result, _) -> Right result
+        [x] -> eval (Spanned x (Span 0 0)) defaultEnv >>= \(result, _) -> Right result
         _ -> Left $ RuntimeException "Must have exactly one argument"
     )
   ]
 
-expandMacro :: Spanned SExpr -> Env -> Either RuntimeException SExpr
-expandMacro (Spanned (SList (Spanned (SAtom (ASymbol name)) _) : args) _) env = case lookup name env of
-  Just (SLambda params True body) -> do
-    eargs <- mapM (`expandMacro` env) args
-    let newEnv = zip params eargs ++ env
-    eval body newEnv >>= \(result, _) -> Right result
-  _ -> Left $ RuntimeException "Not a macro"
-expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
+-- expandMacro :: Spanned SExpr -> Env -> Either RuntimeException SExpr
+-- expandMacro (Spanned (SList (Spanned (SAtom (ASymbol name)) _) : args) _) env = case lookup name env of
+--   Just (SLambda params True body) -> do
+--     eargs <- mapM (`expandMacro` env) args
+--     let newEnv = zip params eargs ++ env
+--     eval body newEnv >>= \(result, _) -> Right result
+--   _ -> Left $ RuntimeException "Not a macro"
+-- expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
 
-eval :: SExpr -> Env -> Either RuntimeException (SExpr, Env)
+eval :: Spanned SExpr -> Env -> Either RuntimeException (SExpr, Env)
 eval (SAtom (AInt x)) env = Right (SAtom $ AInt x, env)
 eval (SAtom (AString x)) env = Right (SAtom $ AString x, env)
 eval (SAtom (AKeyword x)) env = Right (SAtom $ AKeyword x, env)
