@@ -36,8 +36,14 @@ withSpan p = do
 sc :: Parser ()
 sc = L.space space1 (L.skipLineComment ";") empty
 
+scWithSpan :: Parser (Spanned ())
+scWithSpan = withSpan sc
+
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
+
+lexemeWithSpan :: Parser a -> Parser (Spanned a)
+lexemeWithSpan = withSpan . lexeme
 
 symbol :: Text -> Parser Text
 symbol = L.symbol sc
@@ -57,6 +63,9 @@ int = lexeme (try octal <|> try hexadecimal <|> try L.decimal)
 signedInt :: Parser Integer
 signedInt = lexeme $ L.signed (notFollowedBy space1) int
 
+real :: Parser Double
+real = lexeme $ L.signed (notFollowedBy space1) L.float
+
 -- Symbols must start with an alphabetic character or one of the following:
 -- + - * / = < > ! ? $ % & ^ _ ~
 -- The remaining characters can be any sequence of
@@ -75,7 +84,7 @@ keyword = lexeme (char ':' *> (AKeyword <$> readSymbol))
 atom :: Parser Atom
 atom =
   choice
-    [ try (AInt <$> signedInt) <|> try (ASymbol <$> readSymbol),
+    [ try (AReal <$> real) <|> try (AInt <$> signedInt) <|> try (ASymbol <$> readSymbol),
       AString <$> stringLiteral,
       keyword
     ]

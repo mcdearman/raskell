@@ -51,6 +51,7 @@ data Atom
 
 prettyAtom :: Atom -> Text
 prettyAtom (AInt x) = pack $ show x
+prettyAtom (AReal x) = pack $ show x
 prettyAtom (AString x) = pack $ show x
 prettyAtom (ASymbol x) = x
 prettyAtom (AKeyword x) = ":" <> x
