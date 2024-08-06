@@ -33,20 +33,25 @@ withSpan p = do
   result <- p
   Spanned result . Span startPos <$> getOffset
 
+withSpanNoTrailing :: Parser a -> Parser (Spanned a)
+withSpanNoTrailing p = do
+  startPos <- getOffset
+  result <- p
+  endPos <- getOffset
+  sc -- consume trailing whitespace after capturing the span
+  return $ Spanned result (Span startPos endPos)
+
 sc :: Parser ()
 sc = L.space space1 (L.skipLineComment ";") empty
 
-scWithSpan :: Parser (Spanned ())
-scWithSpan = withSpan sc
+lexeme :: Parser a -> Parser (Spanned a)
+lexeme p = withSpanNoTrailing (L.lexeme sc p)
 
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme sc
+-- lexemeWithSpan :: Parser a -> Parser (Spanned a)
+-- lexemeWithSpan p = withSpanNoTrailing (lexeme p)
 
-lexemeWithSpan :: Parser a -> Parser (Spanned a)
-lexemeWithSpan = withSpan . lexeme
-
-symbol :: Text -> Parser Text
-symbol = L.symbol sc
+symbol :: Text -> Parser (Spanned Text)
+symbol p = withSpanNoTrailing (L.symbol sc p)
 
 stringLiteral :: Parser String
 stringLiteral = char '\"' *> manyTill L.charLiteral (char '\"')
@@ -57,13 +62,13 @@ octal = char '0' >> char' 'o' >> L.octal
 hexadecimal :: Parser Integer
 hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
-int :: Parser Integer
+int :: Parser (Spanned Integer)
 int = lexeme (try octal <|> try hexadecimal <|> try L.decimal)
 
-signedInt :: Parser Integer
-signedInt = lexeme $ L.signed (notFollowedBy space1) int
+signedInt :: Parser (Spanned Integer)
+signedInt = lexeme $ L.signed (notFollowedBy space1) (value <$> int)
 
-real :: Parser Double
+real :: Parser (Spanned Double)
 real = lexeme $ L.signed (notFollowedBy space1) L.float
 
 -- Symbols must start with an alphabetic character or one of the following:
@@ -71,23 +76,28 @@ real = lexeme $ L.signed (notFollowedBy space1) L.float
 -- The remaining characters can be any sequence of
 -- characters that are not whitespace, parens, or quotes.
 
-readSymbol :: Parser Text
+readSymbol :: Parser (Spanned Text)
 readSymbol =
   lexeme $ pack <$> ((:) <$> symbolStartChar <*> many symbolChar)
   where
     symbolStartChar = letterChar <|> satisfy (`elem` ("+-*/=<>!?$%&^_~" :: String))
     symbolChar = alphaNumChar <|> satisfy (`notElem` (" \n\t\r()'`," :: String))
 
-keyword :: Parser Atom
-keyword = lexeme (char ':' *> (AKeyword <$> readSymbol))
+keyword :: Parser (Spanned Atom)
+keyword = lexeme (char ':' *> (AKeyword . value <$> readSymbol))
 
-atom :: Parser Atom
+atom :: Parser (Spanned Atom)
 atom =
   choice
-    [ try (AReal <$> real) <|> try (AInt <$> signedInt) <|> try (ASymbol <$> readSymbol),
+    [ try (AReal <$> real)
+        <|> try (AInt . value <$> signedInt)
+        <|> try (ASymbol . value <$> readSymbol),
       AString <$> stringLiteral,
-      keyword
+      value <$> keyword
     ]
+  where r = real
+        i = signedInt
+        s = readSymbol
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
