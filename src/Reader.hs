@@ -53,8 +53,8 @@ lexeme p = withSpanNoTrailing (L.lexeme sc p)
 symbol :: Text -> Parser (Spanned Text)
 symbol p = withSpanNoTrailing (L.symbol sc p)
 
-stringLiteral :: Parser String
-stringLiteral = char '\"' *> manyTill L.charLiteral (char '\"')
+stringLiteral :: Parser (Spanned String)
+stringLiteral = withSpanNoTrailing $ char '\"' *> manyTill L.charLiteral (char '\"')
 
 octal :: Parser Integer
 octal = char '0' >> char' 'o' >> L.octal
@@ -89,15 +89,12 @@ keyword = lexeme (char ':' *> (AKeyword . value <$> readSymbol))
 atom :: Parser (Spanned Atom)
 atom =
   choice
-    [ try (AReal <$> real)
-        <|> try (AInt . value <$> signedInt)
-        <|> try (ASymbol . value <$> readSymbol),
-      AString <$> stringLiteral,
-      value <$> keyword
+    [ try (fmap AReal <$> real)
+        <|> try (fmap AInt <$> signedInt)
+        <|> try (fmap ASymbol <$> readSymbol),
+      fmap AString <$> stringLiteral,
+      keyword
     ]
-  where r = real
-        i = signedInt
-        s = readSymbol
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
@@ -138,7 +135,7 @@ list = withSpan (SList <$> parens (many sexpr))
 sexpr :: Parser (Spanned SExpr)
 sexpr =
   choice
-    [ withSpan (SAtom <$> atom),
+    [ fmap SAtom <$> atom,
       list,
       quote,
       quasiquote,
