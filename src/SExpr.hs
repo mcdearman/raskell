@@ -11,7 +11,6 @@ data Span = Span
   }
   deriving (Show, Eq)
 
--- Data structure to hold a parsed value along with its span
 data Spanned a = Spanned
   { value :: a,
     span :: Span

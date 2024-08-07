@@ -33,14 +33,6 @@ withSpan p = do
   result <- p
   Spanned result . Span startPos <$> getOffset
 
--- withSpan :: Parser a -> Parser (Spanned a)
--- withSpan p = do
---   startPos <- getOffset
---   result <- p
---   endPos <- getOffset
---   sc -- consume trailing whitespace after capturing the span
---   return $ Spanned result (Span startPos endPos)
-
 lexemeWithSpan :: Parser a -> Parser (Spanned a)
 lexemeWithSpan p = withSpan p <* sc
 
@@ -49,9 +41,6 @@ sc = L.space space1 (L.skipLineComment ";") empty
 
 symbol :: Text -> Parser (Spanned Text)
 symbol p = withSpan (L.symbol sc p)
-
--- symbolWithSpan :: Text -> Parser (Spanned Text)
--- symbolWithSpan spc = lexemeWithSpan spc . string
 
 stringLiteral :: Parser (Spanned String)
 stringLiteral = withSpan $ char '\"' *> manyTill L.charLiteral (char '\"')
@@ -62,11 +51,11 @@ octal = char '0' >> char' 'o' >> L.octal
 hexadecimal :: Parser Integer
 hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
-int :: Parser (Spanned Integer)
-int = lexemeWithSpan (try octal <|> try hexadecimal <|> try L.decimal)
+int :: Parser Integer
+int = try octal <|> hexadecimal <|> L.decimal
 
 signedInt :: Parser (Spanned Integer)
-signedInt = lexemeWithSpan $ L.signed (notFollowedBy space1) (value <$> int)
+signedInt = lexemeWithSpan $ L.signed (notFollowedBy space1) int
 
 real :: Parser (Spanned Double)
 real = lexemeWithSpan $ L.signed (notFollowedBy space1) L.float
@@ -90,8 +79,8 @@ atom :: Parser (Spanned Atom)
 atom =
   choice
     [ try (fmap AReal <$> real)
-        <|> try (fmap AInt <$> signedInt)
-        <|> try (fmap ASymbol <$> readSymbol),
+        <|> (fmap AInt <$> signedInt)
+        <|> fmap ASymbol <$> readSymbol,
       fmap AString <$> stringLiteral,
       keyword
     ]
