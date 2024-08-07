@@ -50,6 +50,9 @@ sc = L.space space1 (L.skipLineComment ";") empty
 symbol :: Text -> Parser (Spanned Text)
 symbol p = withSpan (L.symbol sc p)
 
+-- symbolWithSpan :: Text -> Parser (Spanned Text)
+-- symbolWithSpan spc = lexemeWithSpan spc . string
+
 stringLiteral :: Parser (Spanned String)
 stringLiteral = withSpan $ char '\"' *> manyTill L.charLiteral (char '\"')
 
