@@ -33,28 +33,25 @@ withSpan p = do
   result <- p
   Spanned result . Span startPos <$> getOffset
 
-withSpanNoTrailing :: Parser a -> Parser (Spanned a)
-withSpanNoTrailing p = do
-  startPos <- getOffset
-  result <- p
-  endPos <- getOffset
-  sc -- consume trailing whitespace after capturing the span
-  return $ Spanned result (Span startPos endPos)
+-- withSpan :: Parser a -> Parser (Spanned a)
+-- withSpan p = do
+--   startPos <- getOffset
+--   result <- p
+--   endPos <- getOffset
+--   sc -- consume trailing whitespace after capturing the span
+--   return $ Spanned result (Span startPos endPos)
+
+lexemeWithSpan :: Parser a -> Parser (Spanned a)
+lexemeWithSpan p = withSpan p <* sc
 
 sc :: Parser ()
 sc = L.space space1 (L.skipLineComment ";") empty
 
-lexeme :: Parser a -> Parser (Spanned a)
-lexeme p = withSpanNoTrailing (L.lexeme sc p)
-
--- lexemeWithSpan :: Parser a -> Parser (Spanned a)
--- lexemeWithSpan p = withSpanNoTrailing (lexeme p)
-
 symbol :: Text -> Parser (Spanned Text)
-symbol p = withSpanNoTrailing (L.symbol sc p)
+symbol p = withSpan (L.symbol sc p)
 
 stringLiteral :: Parser (Spanned String)
-stringLiteral = withSpanNoTrailing $ char '\"' *> manyTill L.charLiteral (char '\"')
+stringLiteral = withSpan $ char '\"' *> manyTill L.charLiteral (char '\"')
 
 octal :: Parser Integer
 octal = char '0' >> char' 'o' >> L.octal
@@ -63,13 +60,13 @@ hexadecimal :: Parser Integer
 hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
 int :: Parser (Spanned Integer)
-int = lexeme (try octal <|> try hexadecimal <|> try L.decimal)
+int = lexemeWithSpan (try octal <|> try hexadecimal <|> try L.decimal)
 
 signedInt :: Parser (Spanned Integer)
-signedInt = lexeme $ L.signed (notFollowedBy space1) (value <$> int)
+signedInt = lexemeWithSpan $ L.signed (notFollowedBy space1) (value <$> int)
 
 real :: Parser (Spanned Double)
-real = lexeme $ L.signed (notFollowedBy space1) L.float
+real = lexemeWithSpan $ L.signed (notFollowedBy space1) L.float
 
 -- Symbols must start with an alphabetic character or one of the following:
 -- + - * / = < > ! ? $ % & ^ _ ~
@@ -78,13 +75,13 @@ real = lexeme $ L.signed (notFollowedBy space1) L.float
 
 readSymbol :: Parser (Spanned Text)
 readSymbol =
-  lexeme $ pack <$> ((:) <$> symbolStartChar <*> many symbolChar)
+  lexemeWithSpan $ pack <$> ((:) <$> symbolStartChar <*> many symbolChar)
   where
     symbolStartChar = letterChar <|> satisfy (`elem` ("+-*/=<>!?$%&^_~" :: String))
     symbolChar = alphaNumChar <|> satisfy (`notElem` (" \n\t\r()'`," :: String))
 
 keyword :: Parser (Spanned Atom)
-keyword = lexeme (char ':' *> (AKeyword . value <$> readSymbol))
+keyword = lexemeWithSpan (char ':' *> (AKeyword . value <$> readSymbol))
 
 atom :: Parser (Spanned Atom)
 atom =
@@ -122,7 +119,7 @@ unquote = withSpan $ do
   return $ SList [Spanned (SAtom (ASymbol "unquote")) (SExpr.span ch), expr]
 
 -- unquoteSplicing :: Parser (Spanned SExpr)
--- unquoteSplicing = lexeme ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
+-- unquoteSplicing = lexemeWithSpan ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
 unquoteSplicing :: Parser (Spanned SExpr)
 unquoteSplicing = withSpan $ do
   ch <- withSpan $ char '`'
