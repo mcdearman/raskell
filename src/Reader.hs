@@ -94,29 +94,23 @@ quote = withSpan $ do
   expr <- sexpr
   return $ SList [Spanned (SAtom (ASymbol "quote")) (SExpr.span ch), expr]
 
--- quasiquote :: Parser (Spanned SExpr)
--- quasiquote = char '`' *> (SList . (SAtom (ASymbol "quasiquote") :) . pure <$> sexpr)
 quasiquote :: Parser (Spanned SExpr)
 quasiquote = withSpan $ do
   ch <- withSpan $ char '`'
   expr <- sexpr
   return $ SList [Spanned (SAtom (ASymbol "quasiquote")) (SExpr.span ch), expr]
 
--- unquote :: Parser (Spanned SExpr)
--- unquote = char ',' *> (SList . (SAtom (ASymbol "unquote") :) . pure <$> sexpr)
 unquote :: Parser (Spanned SExpr)
 unquote = withSpan $ do
-  ch <- withSpan $ char '`'
+  ch <- withSpan $ char ','
   expr <- sexpr
   return $ SList [Spanned (SAtom (ASymbol "unquote")) (SExpr.span ch), expr]
 
--- unquoteSplicing :: Parser (Spanned SExpr)
--- unquoteSplicing = lexemeWithSpan ",@" *> (SList . (SAtom (ASymbol "unquote-splicing") :) . pure <$> sexpr)
 unquoteSplicing :: Parser (Spanned SExpr)
 unquoteSplicing = withSpan $ do
-  ch <- withSpan $ char '`'
+  s <- withSpan $ symbol ",@"
   expr <- sexpr
-  return $ SList [Spanned (SAtom (ASymbol "unquote-splicing")) (SExpr.span ch), expr]
+  return $ SList [Spanned (SAtom (ASymbol "unquote-splicing")) (SExpr.span s), expr]
 
 list :: Parser (Spanned SExpr)
 list = withSpan (SList <$> parens (many sexpr))
