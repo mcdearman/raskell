@@ -79,7 +79,7 @@ atom :: Parser (Spanned Atom)
 atom =
   choice
     [ try (fmap AReal <$> real)
-        <|> (fmap AInt <$> signedInt)
+        <|> try (fmap AInt <$> signedInt)
         <|> fmap ASymbol <$> readSymbol,
       fmap AString <$> stringLiteral,
       keyword
