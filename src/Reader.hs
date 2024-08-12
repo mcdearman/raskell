@@ -40,10 +40,10 @@ sc :: Parser ()
 sc = L.space space1 (L.skipLineComment ";") empty
 
 symbol :: Text -> Parser (Spanned Text)
-symbol p = withSpan (L.symbol sc p)
+symbol p = lexemeWithSpan (L.symbol sc p)
 
 stringLiteral :: Parser (Spanned String)
-stringLiteral = withSpan $ char '\"' *> manyTill L.charLiteral (char '\"')
+stringLiteral = lexemeWithSpan $ char '\"' *> manyTill L.charLiteral (char '\"')
 
 octal :: Parser Integer
 octal = char '0' >> char' 'o' >> L.octal
