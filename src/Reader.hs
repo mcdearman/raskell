@@ -52,7 +52,7 @@ hexadecimal :: Parser Integer
 hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
 int :: Parser Integer
-int = try octal <|> hexadecimal <|> L.decimal
+int = try octal <|> try hexadecimal <|> L.decimal
 
 signedInt :: Parser (Spanned Integer)
 signedInt = lexemeWithSpan $ L.signed (notFollowedBy space1) int
@@ -69,8 +69,8 @@ readSymbol :: Parser (Spanned Text)
 readSymbol =
   lexemeWithSpan $ pack <$> ((:) <$> symbolStartChar <*> many symbolChar)
   where
-    symbolStartChar = letterChar <|> satisfy (`elem` ("+-*/=<>!?$%&^_~" :: String))
-    symbolChar = alphaNumChar <|> satisfy (`notElem` (" \n\t\r()'`," :: String))
+    symbolStartChar = try letterChar <|> satisfy (`elem` ("+-*/=<>!?$%&^_~" :: String))
+    symbolChar = try alphaNumChar <|> satisfy (`notElem` (" \n\t\r()'`," :: String))
 
 keyword :: Parser (Spanned Atom)
 keyword = lexemeWithSpan (char ':' *> (AKeyword . value <$> readSymbol))
@@ -80,7 +80,7 @@ atom =
   choice
     [ try (fmap AReal <$> real)
         <|> try (fmap AInt <$> signedInt)
-        <|> fmap ASymbol <$> readSymbol,
+        <|> try (fmap ASymbol <$> readSymbol),
       fmap AString <$> stringLiteral,
       keyword
     ]
