@@ -156,23 +156,24 @@ type Env = [(Text, SExpr)]
 -- --   _ -> Left $ RuntimeException "Not a macro"
 -- -- expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
 
--- eval :: Spanned SExpr -> Env -> Either RuntimeException (SExpr, Env)
--- eval (Spanned (SAtom (AInt x)) _) env = Right (SAtom $ AInt x, env)
--- eval (Spanned (SAtom (AString x)) _) env = Right (SAtom $ AString x, env)
--- eval (Spanned (SAtom (AKeyword x)) _) env = Right (SAtom $ AKeyword x, env)
--- eval
---   ( Spanned
---       ( SList
---           [ Spanned (SAtom (ASymbol "def")) _,
---             Spanned (SAtom (ASymbol name)) _,
---             val
---             ]
---         )
---       _
---     )
---   env = do
---     (val', _) <- eval val env
---     Right (val', (name, val') : env)
+eval :: Spanned SExpr -> Env -> Either RuntimeException (SExpr, Env)
+eval (Spanned (SAtom (AInt x)) _) env = Right (SAtom $ AInt x, env)
+eval (Spanned (SAtom (AString x)) _) env = Right (SAtom $ AString x, env)
+eval (Spanned (SAtom (AKeyword x)) _) env = Right (SAtom $ AKeyword x, env)
+eval
+  ( Spanned
+      ( SList
+          [ Spanned (SAtom (ASymbol "def")) _,
+            Spanned (SAtom (ASymbol name)) _,
+            val
+            ]
+        )
+      _
+    )
+  env = do
+    (val', _) <- eval val env
+    Right (val', (name, val') : env)
+
 -- eval (Spanned (SList [Spanned (SAtom (ASymbol "def")) _, Spanned (SList (Spanned (SAtom (ASymbol name)) _ : params)) _, body]) _) env =
 --   let lam = SLambda (map (\case (SAtom (ASymbol x)) -> x; _ -> error "Non-symbol function param") params) False body
 --    in Right (lam, (name, lam) : env)
@@ -255,4 +256,4 @@ type Env = [(Text, SExpr)]
 --     SNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
 --     _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
 -- eval (Spanned (SList []) _) _ = Left $ RuntimeException "Empty list"
--- eval e _ = Left $ RuntimeException ("Invalid expression: " <> pack (show e))
+eval e _ = Left $ RuntimeException ("Invalid expression: " <> pack (show e))
