@@ -22,6 +22,17 @@ defaultEnv =
            in foldInts i xs
         [] -> Left $ RuntimeException "Must have at least one argument"
         vs -> Left $ RuntimeException ("Arguments must be integers" <> pack (show $ map show vs))
+    ),
+    ( "-",
+      VNativeFn $ NativeFn $ \case
+        (VInt i : xs) ->
+          let foldInts acc = \case
+                (VInt x : xs') -> foldInts (acc - x) xs'
+                [] -> Right $ VInt acc
+                _ -> Left $ RuntimeException "Arguments must be integers"
+           in foldInts i xs
+        [] -> Left $ RuntimeException "Must have at least one argument"
+        vs -> Left $ RuntimeException ("Arguments must be integers" <> pack (show $ map show vs))
     )
   ]
 
