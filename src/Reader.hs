@@ -42,8 +42,8 @@ sc = L.space space1 (L.skipLineComment ";") empty
 symbol :: Text -> Parser (Spanned Text)
 symbol p = lexemeWithSpan (L.symbol sc p)
 
-stringLiteral :: Parser (Spanned String)
-stringLiteral = lexemeWithSpan $ char '\"' *> manyTill L.charLiteral (char '\"')
+stringLiteral :: Parser (Spanned Text)
+stringLiteral = lexemeWithSpan $ char '\"' *> (pack <$> manyTill L.charLiteral (char '\"'))
 
 octal :: Parser Integer
 octal = char '0' >> char' 'o' >> L.octal
@@ -117,14 +117,15 @@ list = withSpan (SList <$> parens (many sexpr))
 
 sexpr :: Parser (Spanned SExpr)
 sexpr =
-  choice
-    [ fmap SAtom <$> atom,
-      list,
-      quote,
-      quasiquote,
-      unquoteSplicing,
-      unquote
-    ]
+  sc
+    *> choice
+      [ fmap SAtom <$> atom,
+        list,
+        quote,
+        quasiquote,
+        unquoteSplicing,
+        unquote
+      ]
 
 readSExpr :: Text -> Either (ParseErrorBundle Text Void) (Spanned SExpr)
 readSExpr = parse sexpr ""

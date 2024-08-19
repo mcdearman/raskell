@@ -26,28 +26,16 @@ instance Functor Spanned where
 data SExpr
   = SAtom Atom
   | SList [Spanned SExpr]
-  | SLambda [Spanned Text] Bool (Spanned SExpr)
-  | SNativeFn NativeFn
   deriving (Eq, Show)
 
 prettySExpr :: SExpr -> Text
 prettySExpr (SAtom x) = prettyAtom x
 prettySExpr (SList xs) = "(" <> pack (unwords $ map (unpack . prettySExpr . value) xs) <> ")"
-prettySExpr (SLambda {}) = "<lambda>"
-prettySExpr (SNativeFn _) = "<nativeFn>"
-
-newtype NativeFn = NativeFn ([Spanned SExpr] -> Either RuntimeException (Spanned SExpr))
-
-instance Eq NativeFn where
-  _ == _ = False
-
-instance Show NativeFn where
-  show _ = "<nativeFn>"
 
 data Atom
   = AInt Integer
   | AReal Double
-  | AString String
+  | AString Text
   | ASymbol Text
   | AKeyword Text
   deriving (Eq, Show)

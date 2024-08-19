@@ -6,22 +6,25 @@ import Debug.Trace (trace)
 import RuntimeException
 import SExpr
 import Text.Pretty.Simple (pShow)
+import Value
 
-type Env = [(Text, SExpr)]
+type Env = [(Text, Value)]
 
--- defaultEnv :: Env
--- defaultEnv =
---   [ ( "+",
---       SNativeFn $ NativeFn $ \case
---         (Spanned (SAtom (AInt a)) _ : xs) ->
---           let foldInts acc = \case
---                 (Spanned (SAtom (AInt x)) _ : xs') -> foldInts (acc + x) xs'
---                 [] -> Right $ SAtom $ AInt acc
---                 _ -> Left $ RuntimeException "Arguments must be integers"
---            in foldInts a xs
---         [] -> Left $ RuntimeException "Must have at least one argument"
---         e -> Left $ RuntimeException ("Arguments must be integers" <> pack (show $ map SExpr.span e))
---     ),
+defaultEnv :: Env
+defaultEnv =
+  [ ( "+",
+      VNativeFn $ NativeFn $ \case
+        (VInt i : xs) ->
+          let foldInts acc = \case
+                (VInt x : xs') -> foldInts (acc + x) xs'
+                [] -> Right $ VInt acc
+                _ -> Left $ RuntimeException "Arguments must be integers"
+           in foldInts i xs
+        [] -> Left $ RuntimeException "Must have at least one argument"
+        vs -> Left $ RuntimeException ("Arguments must be integers" <> pack (show $ map show vs))
+    )
+  ]
+
 --     ( "-",
 --       SNativeFn $ NativeFn $ \case
 --         (SAtom (AInt a) : xs) ->
@@ -156,10 +159,10 @@ type Env = [(Text, SExpr)]
 -- --   _ -> Left $ RuntimeException "Not a macro"
 -- -- expandMacro _ _ = Left $ RuntimeException "Invalid macro call"
 
-eval :: Spanned SExpr -> Env -> Either RuntimeException (SExpr, Env)
-eval (Spanned (SAtom (AInt x)) _) env = Right (SAtom $ AInt x, env)
-eval (Spanned (SAtom (AString x)) _) env = Right (SAtom $ AString x, env)
-eval (Spanned (SAtom (AKeyword x)) _) env = Right (SAtom $ AKeyword x, env)
+eval :: Spanned SExpr -> Env -> Either RuntimeException (Value, Env)
+eval (Spanned (SAtom (AInt x)) _) env = Right (VInt x, env)
+eval (Spanned (SAtom (AString x)) _) env = Right (VString x, env)
+eval (Spanned (SAtom (AKeyword x)) _) env = Right (VKeyword x, env)
 eval
   ( Spanned
       ( SList
@@ -240,20 +243,20 @@ eval
 -- eval (Spanned (SList (Spanned (SAtom (ASymbol "list")) _ : xs)) _) env = do
 --   xs' <- mapM (`eval` env) xs
 --   Right (SList (map fst xs'), env)
--- eval (Spanned (SAtom (ASymbol x)) s) env = case lookup x env of
---   Just v -> Right (v, env)
---   Nothing -> Left $ RuntimeException $ "Symbol '" <> x <> "@" <> pack (show s) <> "' not found in environment"
--- eval sexpr@(Spanned (SList (fn : args)) _) env = do
---   (fn', fn_env) <- eval fn env
---   args' <- mapM (fmap fst . (`eval` env)) args
---   case fn' of
---     SLambda params False body -> do
---       let newEnv = zip params args' ++ fn_env
---       eval body newEnv
---     SLambda _ True _ -> do
---       m <- trace "expansion: " (expandMacro sexpr fn_env)
---       eval m env
---     SNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
---     _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
--- eval (Spanned (SList []) _) _ = Left $ RuntimeException "Empty list"
+eval (Spanned (SAtom (ASymbol x)) s) env = case lookup x env of
+  Just v -> Right (v, env)
+  Nothing -> Left $ RuntimeException $ "Symbol '" <> x <> "@" <> pack (show s) <> "' not found in environment"
+eval sexpr@(Spanned (SList (fn : args)) _) env = do
+  (fn', fn_env) <- eval fn env
+  args' <- mapM (fmap fst . (`eval` env)) args
+  case fn' of
+    VLambda params False body -> do
+      let newEnv = zip params args' ++ fn_env
+      eval body newEnv
+    -- SLambda _ True _ -> do
+    --   m <- trace "expansion: " (expandMacro sexpr fn_env)
+    --   eval m env
+    VNativeFn (NativeFn f) -> fmap (,fn_env) (f args')
+    _ -> Left $ RuntimeException $ "First element of list must be a function got: " <> toStrict (pShow fn')
+eval (Spanned (SList []) _) _ = Left $ RuntimeException "Empty list"
 eval e _ = Left $ RuntimeException ("Invalid expression: " <> pack (show e))

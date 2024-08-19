@@ -21,6 +21,7 @@ executable raskell
         Eval
         RuntimeException
         SExpr
+        Value
     default-extensions: 
         OverloadedStrings
         ScopedTypeVariables
