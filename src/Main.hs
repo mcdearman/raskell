@@ -7,6 +7,7 @@ import Reader
 import SExpr
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Text.Pretty.Simple (pPrint, pShow)
+import Value (prettyValue)
 
 repl :: Env -> IO ()
 repl env = do
@@ -16,11 +17,11 @@ repl env = do
   case readSExpr input of
     Left err -> pPrint err
     Right s -> do
-      pPrint s
+      -- pPrint s
       case eval s env of
         Left err -> print err
         Right (result, env') -> do
-          putStrLn $ unpack (toStrict (pShow result)) <> "\n"
+          putStrLn $ unpack (prettyValue result) <> "\n"
           -- pPrint env'
           repl env'
   repl env

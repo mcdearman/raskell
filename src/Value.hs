@@ -22,3 +22,13 @@ instance Eq NativeFn where
 
 instance Show NativeFn where
   show _ = "<nativeFn>"
+
+prettyValue :: Value -> Text
+prettyValue (VInt i) = pack $ show i
+prettyValue (VReal r) = pack $ show r
+prettyValue (VString s) = s
+prettyValue (VSymbol s) = s
+prettyValue (VKeyword s) = ":" <> s
+prettyValue (VList l) = "(" <> intercalate " " (prettyValue <$> l) <> ")"
+prettyValue (VLambda _ _ _) = "<lambda>"
+prettyValue (VNativeFn _) = "<nativeFn>"
