@@ -112,6 +112,17 @@ x
 
 (def (compose f g x) (f (g x)))
 
+; with annotations
+(def (compose {a b c} (f : (-> b c)) (g : (-> a b)) (x : a) : c) (f (g x)))
+
+(def (compose {a b c}
+  (f : (-> b c)) 
+  (g : (-> a b)) 
+  (x : a) 
+  : c) (f (g x)))
+
+;; def compose {a b c} (f : (b -> c) g : (a -> b) x : a) : c 
+
 (let ((id (fn (x) x))) (id 1))
 
 (def (fib n) (let ((loop (fn (a b i) (if (= i 0) a (loop b (+ a b) (- i 1)))))) (loop 0 1 n)))
