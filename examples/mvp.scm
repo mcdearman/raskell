@@ -115,11 +115,16 @@ x
 ; with annotations
 (def (compose {a b c} (f : (-> b c)) (g : (-> a b)) (x : a) : c) (f (g x)))
 
-(def (compose {a b c}
+(def (compose {a b c})
   (f : (-> b c)) 
   (g : (-> a b)) 
   (x : a) 
-  : c) (f (g x)))
+  : c) (f (g x))
+
+(def (map : 'a 'b. ('a -> 'b) -> ['a] -> ['b])
+   (match xs 
+     ([] [])
+     ((x :: xs) (f x :: map f xs))))
 
 ;; def compose {a b c} (f : (b -> c) g : (a -> b) x : a) : c 
 
