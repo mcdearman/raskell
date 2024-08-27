@@ -14,7 +14,7 @@ prettySExpr (SAtom x) = prettyAtom x
 prettySExpr (SList xs) = "(" <> pack (unwords $ map (unpack . prettySExpr . value) xs) <> ")"
 
 data Atom
-  = AInt Integer
+  = AInt Int
   | AReal Double
   | AString Text
   | ASymbol Text

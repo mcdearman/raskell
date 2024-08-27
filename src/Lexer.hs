@@ -96,3 +96,7 @@ token =
         TComment <$ lexemeWithSpan (char ';' *> manyTill L.charLiteral (char '\n')),
         TEOF <$ eof
       ]
+
+tokenize :: Text -> Either (ParseErrorBundle Text Void) [Spanned Token]
+tokenize = parse (many token <* eof) ""
+

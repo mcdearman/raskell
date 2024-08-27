@@ -1,11 +1,13 @@
 module Value where
 
 import Data.Text
-import RuntimeException
-import SExpr (SExpr, Spanned)
+import RuntimeException (RuntimeException)
+import SExpr
+import Span
+import Prelude hiding (unwords)
 
 data Value
-  = VInt Integer
+  = VInt Int
   | VReal Double
   | VString Text
   | VSymbol Text
@@ -29,6 +31,6 @@ prettyValue (VReal r) = pack $ show r
 prettyValue (VString s) = s
 prettyValue (VSymbol s) = s
 prettyValue (VKeyword s) = ":" <> s
-prettyValue (VList l) = "(" <> intercalate " " (prettyValue <$> l) <> ")"
-prettyValue (VLambda _ _ _) = "<lambda>"
+prettyValue (VList l) = "(" <> unwords (prettyValue <$> l) <> ")"
+prettyValue (VLambda {}) = "<lambda>"
 prettyValue (VNativeFn _) = "<nativeFn>"

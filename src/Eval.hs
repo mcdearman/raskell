@@ -5,6 +5,7 @@ import Data.Text.Lazy (toStrict)
 import Debug.Trace (trace)
 import RuntimeException
 import SExpr
+import Span
 import Text.Pretty.Simple (pShow)
 import Value
 
