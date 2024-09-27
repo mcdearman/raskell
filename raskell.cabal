@@ -32,7 +32,7 @@ executable raskell
         TupleSections
         TemplateHaskell
     build-depends:    
-        base ^>=4.17.2.1,
+        base,
         megaparsec,
         text,
         pretty-simple,
