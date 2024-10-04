@@ -128,6 +128,11 @@ x
 
 ;; def compose {a b c} (f : (b -> c) g : (a -> b) x : a) : c 
 
+;; Pipe operator
+(def (|> x f) (f x))
+
+(xs |> map f |> filter p)
+
 (let ((id (fn (x) x))) (id 1))
 
 (def (fib n) (let ((loop (fn (a b i) (if (= i 0) a (loop b (+ a b) (- i 1)))))) (loop 0 1 n)))
@@ -212,6 +217,8 @@ x
   (if (empty? xs)
       z
       (f (head xs) (foldr f z (tail xs)))))
+
+(def sum (foldr + 0))
 
 `(1 2 ,@(map id '(3 4)))
 
