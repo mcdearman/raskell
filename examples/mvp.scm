@@ -212,6 +212,14 @@ x
   (if (empty? xs)
       '()
       (pair (f (head xs)) (map f (tail xs)))))
+
+(def (map f xs)
+  (match xs
+    ([] [])
+    ((Pair x xs) (pair (f x) (map f xs)))))
+
+;; infix with sweet expressions
+xs |> (map f) |> (filter p)
   
 (def (foldr f z xs)
   (if (empty? xs)
