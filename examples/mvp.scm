@@ -238,6 +238,8 @@ xs |> (map f) |> (filter p)
 
 (macro (when test body) `(if ,test ,body))
 
+(macro (compose f g) `(fn (x) (,f (,g x))))
+
 (quasiquote (1 2 ,(+ 1 2)))
 
 (macro (quasiquote x)
