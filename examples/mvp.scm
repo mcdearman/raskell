@@ -217,9 +217,6 @@ x
   (match xs
     ([] [])
     ((Pair x xs) (pair (f x) (map f xs)))))
-
-;; infix with sweet expressions
-xs |> (map f) |> (filter p)
   
 (def (foldr f z xs)
   (if (empty? xs)

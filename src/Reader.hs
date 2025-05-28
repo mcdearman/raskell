@@ -18,9 +18,8 @@ import Text.Megaparsec
     parse,
     satisfy,
   )
-import Token (Token, TokenStream)
 
-type Parser = Parsec Void TokenStream
+type Parser = Parsec Void Text
 
 withSpan :: Parser a -> Parser (Spanned a)
 withSpan p = do
