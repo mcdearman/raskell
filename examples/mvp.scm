@@ -175,20 +175,14 @@ x
         true)))
 
 ; sieve of eratosthenes
-(def (sieve n)
-  (let ((s (array n true)))
-    (set s 0 false)
-    (set s 1 false)
-    (let loop ((i 2))
-      (if (< i n)
-          (if (get s i)
-              (let ((j (* i i)))
-                (while (< j n)
-                  (set s j false)
-                  (set j (+ j i))))
-              '())
-          (loop (+ i 1))))
-    (foldr (fn (i acc) (if (get s i) (pair i acc) acc)) '() (range 2 n))))
+; sieve [] = []
+; sieve (p :: xs) = p :: sieve [x | x <- xs, x `mod` p > 0]
+
+(def (sieve xs)
+  (if (empty? xs)
+      '()
+      (let ((p (head xs)))
+        (pair p (sieve (filter (lambda (x) (> (% x p) 0)) (tail xs)))))))
 
 (def (fib n)
   (let ((loop (fn (a b i)
