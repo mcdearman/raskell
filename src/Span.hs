@@ -1,6 +1,6 @@
 module Span where
 
-import Data.Text
+import Data.Text (Text, pack)
 
 data Span
   = SrcLoc {start :: Int, end :: Int}

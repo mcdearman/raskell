@@ -112,26 +112,8 @@ x
 
 (def (compose f g x) (f (g x)))
 
-; with annotations
-(def (compose {a b c} (f : (-> b c)) (g : (-> a b)) (x : a) : c) (f (g x)))
-
-(def (compose {a b c})
-  (f : (-> b c)) 
-  (g : (-> a b)) 
-  (x : a) 
-  : c) (f (g x))
-
-(def (map : 'a 'b. ('a -> 'b) -> ['a] -> ['b])
-   (match xs 
-     ([] [])
-     ((x :: xs) (f x :: map f xs))))
-
-;; def compose {a b c} (f : (b -> c) g : (a -> b) x : a) : c 
-
 ;; Pipe operator
 (def (|> x f) (f x))
-
-(xs |> map f |> filter p)
 
 (let ((id (fn (x) x))) (id 1))
 
